@@ -182,6 +182,8 @@ class TxtToResult:
             elif self._good_no == 303:
                 pass
             elif self._good_no == 401:
+                if reco_good_line_handler.is_good_401(items):
+                    good = reco_good_line_handler.get_good_401(items)
                 pass
             elif self._good_no == 402:
                 pass

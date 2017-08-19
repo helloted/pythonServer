@@ -148,14 +148,18 @@ def save_order(order,device_sn,store_id):
 
 def save_to_file(file_name, contents):
     super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
-    folder_path = super_path + '/files/failed_capture'
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
 
     time_now = int(time.time())
     time_local = time.localtime(time_now)
-    date_str =  time.strftime("%Y%m%d_%H%M%S", time_local)
-    file_path = folder_path + '/' + file_name  +'_'+ date_str +'.txt'
+    full_date_str =  time.strftime("%H_%M_%S", time_local)
+
+    date_str = time.strftime("%Y%m%d", time_local)
+
+    folder_path = super_path + '/files/failed_capture/'+ date_str
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    file_path = folder_path + '/' + file_name  +'_'+ full_date_str +'.txt'
     logger.info('failed_save:'+file_path)
     fh = open(file_path, 'w')
     fh.write(contents)
@@ -194,6 +198,7 @@ def upload_capture(data,tcp_socket):
                 save_to_file(tcp_socket.device_sn, content_str)
                 send = fail_response_with_str(data, 'para failed')
                 tcp_socket.send(send)
+                return
             for result in order_list:
                 order = result.get('order')
                 if order:

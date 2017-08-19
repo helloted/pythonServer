@@ -146,7 +146,7 @@ def request_app(data,tcp_socket):
             temp_time = current_time
             temp = file
     content = {}
-    content['url'] = 'http://47.74.130.48:8005/files/app' + temp
+    content['url'] = 'http://47.74.130.48:8005/files/app/' + temp
     send = succss_response_content(data,content)
     tcp_socket.send(send)
     logger.info(send)

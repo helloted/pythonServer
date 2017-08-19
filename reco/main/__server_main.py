@@ -2,6 +2,7 @@
 
 import json
 import re
+import os
 
 from flask import Flask, request
 
@@ -42,6 +43,21 @@ def parse():
     return t
 
 
+@app.route('/hello', methods=['GET', 'POST'])
+def hello():
+    print "hello"
+    f = open(os.getcwd() + "/hello.html")
+    lines = f.readlines()
+    html = "".join(lines)
+    print html
+    f.close()
+    return html
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    print "login"
+    return "success"
 
 if __name__ == '__main__':
     app.run(host='192.168.0.66', port=5000, debug=True)
