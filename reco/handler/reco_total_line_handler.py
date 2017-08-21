@@ -16,10 +16,11 @@ def is_total_line(items, keyword):
         keyword == "total"
     keyword = keyword.lower()
     if len(items) == 2:
+        items[1].replace(":","").replace(".","")
         items0 = str(items[0]).lower()
         items1 = utils.parse_format_price(items[1])
         if type(items0) == str and keyword in items0 \
-                and (type(items1) == int or type(items1) == float) and items1 > 100:
+                and (type(items1) == int or type(items1) == float) and items1 > 1:
             return True
     return False
 
