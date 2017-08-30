@@ -22,11 +22,15 @@ def is_id(items, keys):
 
 """
 解析出订单id
+认为最后一个key后面第一个字符串就是id
+例如:key1 key2 id
 """
 
 
 def get_id(items, keys):
-    line = "".join(items)
+    start = items.index(keys[0])
+    end = items.index(keys[len(keys)-1])
+    line = "".join(items[start : end+2])
     reg_exp = "|".join(keys) + "|" + const.REG_EXP_SPECIAL_CHAR
     order_id = re.sub(reg_exp, "", line)
     return order_id

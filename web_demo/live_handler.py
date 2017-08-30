@@ -228,6 +228,6 @@ class PrintHandler(tornado.web.RequestHandler):
             self.client.unsubscribe('channel_great');
 
     def on_timeout(self, num):
-        self.send_data(json_encode({'name': '', 'msg': ''}))
+        self.send_data(json_encode({'code':10, 'msg': 'time_out'}))
         if (self.client.connection.connected()):
             self.client.disconnect()

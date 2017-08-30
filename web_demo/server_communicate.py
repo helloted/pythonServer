@@ -135,14 +135,17 @@ def socket_connect():
 def handle_data(body):
     content = body.get('content')
     seq = body.get('seq')
+    cmd = body.get('cmd')
+
     if seq == 3:
         logger.info('hart beat response')
-    if seq == 5:
+    if cmd == 'print_content':
         logger.info(body)
         device_sn = content.get('device_sn')
         post_time = content.get('post_time')
         channel = device_sn + str(post_time)
         redis_center.publish(channel, body)
+
 
 
 def received_handel():

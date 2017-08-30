@@ -13,3 +13,5 @@ r_queue= redis.StrictRedis(host='localhost', port=6379, db=4)
 
 r_upload_token = redis.StrictRedis(host='localhost', port=6379, db=5)
 
+r_store_info = redis.StrictRedis(host='localhost', port=6379, db=6)
+

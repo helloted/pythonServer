@@ -115,7 +115,9 @@ def heart_beat():
     data2 = {"cmd": "heart_beat",
              "seq": 3,
              "version": "1",
+             'content':{'changed':False}
              }
+
 
     body = json.dumps(data2)
     header = body.__len__()
@@ -152,7 +154,7 @@ def prin_res():
 if __name__ == '__main__':
     init_connect()
     while True:
-        adddeal()
+        heart_beat()
         time.sleep(10)
 
 

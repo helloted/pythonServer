@@ -19,7 +19,17 @@ import datetime
 
 class HistoryDevicesHandler(tornado.web.RequestHandler):
     def get(self):
-        devices = self.get_argument('devices')
+        # devices = self.get_argument('devices')
+
+        request_type = 0
+        store_id = 1
+        devices = self.get_argument('devices','no')
+        if devices != 'no':
+            request_type = 1
+        else:
+            store_id = self.get_argument('store_id', 1)
+            request_type = 2
+
 
         start_time = int(self.get_argument('start_time'))
         end_time = int(self.get_argument('end_time'))
@@ -34,9 +44,14 @@ class HistoryDevicesHandler(tornado.web.RequestHandler):
 
         session = Session()
         try:
-            deals = session.query(Deal).filter(Deal.device_sn.in_(devices_list),Deal.time.between(start_time, end_time)).\
-                order_by((Deal.time.desc())).limit(amount).offset(start).all()
-            count = session.query(Deal).filter(Deal.device_sn.in_(devices_list),Deal.time.between(start_time, end_time)).count()
+            if request_type == 1:
+                deals = session.query(Deal).filter(Deal.device_sn.in_(devices_list),Deal.time.between(start_time, end_time)).\
+                    order_by((Deal.time.desc())).limit(amount).offset(start).all()
+                count = session.query(Deal).filter(Deal.device_sn.in_(devices_list),Deal.time.between(start_time, end_time)).count()
+            else:
+                deals = session.query(Deal).filter(Deal.store_id==store_id,Deal.time.between(start_time, end_time)).\
+                    order_by((Deal.time.desc())).limit(amount).offset(start).all()
+                count = session.query(Deal).filter(Deal.store_id==store_id,Deal.time.between(start_time, end_time)).count()
         except Exception,e:
             session.rollback()
             logger.info(e)
@@ -50,8 +65,13 @@ class HistoryDevicesHandler(tornado.web.RequestHandler):
                 deal = {}
                 deal['device_sn'] = obj.device_sn
                 deal['deal_sn'] = obj.sn
+                if obj.orgin_id:
+                    deal['orgin_id'] = obj.orgin_id
+                else:
+                    deal['orgin_id'] = obj.sn
                 deal['time'] = obj.time
                 deal['total_price'] = obj.total_price
+                deal['tax'] = obj.tax
                 list.append(deal)
 
             data= {}
@@ -88,14 +108,17 @@ class HistoryStoreHandler(tornado.web.RequestHandler):
         indexstr = self.get_argument('index')
         amount = int(self.get_argument('amount'))
 
+        start_time = int(self.get_argument('start_time'))
+        end_time = int(self.get_argument('end_time'))
+
         index = int(indexstr) - 1
         start = index * amount
 
         session = Session()
         try:
-            deals = session.query(Deal).filter(Deal.store_id == store_id).\
+            deals = session.query(Deal).filter(Deal.store_id == store_id,Deal.time.between(start_time, end_time)).\
                 order_by((Deal.time.desc())).limit(amount).offset(start).all()
-            count = session.query(Deal).filter(Deal.store_id == store_id).count()
+            count = session.query(Deal).filter(Deal.store_id == store_id,Deal.time.between(start_time, end_time)).count()
         except Exception,e:
             session.rollback()
             print e
@@ -110,8 +133,13 @@ class HistoryStoreHandler(tornado.web.RequestHandler):
                 deal = {}
                 deal['device_sn'] = obj.device_sn
                 deal['deal_sn'] = obj.sn
+                if obj.orgin_id:
+                    deal['orgin_id'] = obj.orgin_id
+                else:
+                    deal['orgin_id'] = obj.sn
                 deal['time'] = obj.time
                 deal['total_price'] = obj.total_price
+                deal['tax'] = obj.tax
                 list.append(deal)
 
 
@@ -142,6 +170,77 @@ class HistoryStoreHandler(tornado.web.RequestHandler):
             self.write(jsonrsp)
 
 
+class HistoryDisctrictHandler(tornado.web.RequestHandler):
+    def get(self):
+        disctrict = self.get_argument('district')
+
+
+        indexstr = self.get_argument('index')
+        amount = int(self.get_argument('amount'))
+
+        start_time = int(self.get_argument('start_time'))
+        end_time = int(self.get_argument('end_time'))
+
+        index = int(indexstr) - 1
+        start = index * amount
+
+        session = Session()
+        try:
+            deals = session.query(Deal).filter(Deal.store_id == Store.store_id,Store.district==disctrict,Deal.time.between(start_time, end_time)).\
+                order_by((Deal.time.desc())).limit(amount).offset(start).all()
+            count = session.query(Deal).filter(Deal.store_id == Store.store_id,Store.district==disctrict,Deal.time.between(start_time, end_time)).count()
+        except Exception,e:
+            session.rollback()
+            print e
+            resdic = {}
+            resdic['code'] = 101
+            resdic['message'] = 'history failed'
+            resdic['data'] = None
+        else:
+            print 'count:',count
+            list = []
+            for obj in deals:
+                deal = {}
+                deal['device_sn'] = obj.device_sn
+                deal['deal_sn'] = obj.sn
+                deal['time'] = obj.time
+                deal['total_price'] = obj.total_price
+                deal['tax'] = obj.tax
+                if obj.orgin_id:
+                    deal['orgin_id'] = obj.orgin_id
+                else:
+                    deal['orgin_id'] = obj.sn
+                list.append(deal)
+
+
+            data= {}
+            data['index'] = indexstr
+            data['amount'] = amount
+            data['deals'] = list
+
+            total_page = count/amount + 1
+
+            data['total_page'] = total_page
+
+            resdic = {}
+
+            resdic['code'] = 0
+            resdic['message'] = 'success'
+            resdic['data'] = data
+        finally:
+            session.close()
+
+            jsonrsp = json.dumps(resdic)
+            self.set_header('Content-Type', 'application/json; charset=UTF-8')
+            headers = self.request.headers
+            orgin = headers.get('Origin')
+            if orgin:
+                self.add_header("Access-Control-Allow-Origin", orgin)
+            self.add_header("Access-Control-Allow-Credentials", 'true')
+            self.write(jsonrsp)
+
+
+
 class DealDetailHandler(tornado.web.RequestHandler):
     def get(self):
         deal_sn =  self.get_argument('deal_sn')
@@ -160,9 +259,12 @@ class DealDetailHandler(tornado.web.RequestHandler):
         else:
             data= {}
             data['deal_id'] = deal.id
+            data['orgin_id'] = deal.orgin_id
+            data['orgin'] = deal.orgin
             data['deal_sn'] = deal.sn
             data['time'] = deal.time
             data['total_price'] = deal.total_price
+            data['tax'] = deal.tax
             data['items'] = deal.items_list
 
             resdic['code'] = 0
@@ -211,6 +313,12 @@ class StatisticsDeviceHandler(tornado.web.RequestHandler):
                              filter(Deal.time.between(start_time, end_time), \
                                           Deal.device_sn.in_(devices_list)).\
                              group_by(func.date_format(Deal.datetime, '%Y-%m-%d')).all()
+            amount_result = session.query(
+                                   func.count('*'),
+                                   func.sum(Deal.total_price),
+                                   func.sum(Deal.total_price)).\
+                             filter(Deal.time.between(start_time, end_time), \
+                                          Deal.device_sn.in_(devices_list)).all()
         except Exception,e:
             session.rollback()
 
@@ -246,6 +354,10 @@ class StatisticsDeviceHandler(tornado.web.RequestHandler):
             data['dates'] = dates
             data['counts'] = counts
             data['totals'] = totals
+
+            data['tax_total'] = 0
+            data['count_total'] = 0
+            data['total_total'] = 0
 
             resdic['code'] = 0
             resdic['message'] = 'success'
@@ -286,21 +398,51 @@ def add_months(dt,months):
 
 class StatisticsYearHandler(tornado.web.RequestHandler):
     def get(self):
-        devices = self.get_argument('devices')
-
-        devices_list = eval(devices)
-
         start_time = int(self.get_argument('start_time'))
         end_time = int(self.get_argument('end_time'))
+        request_type = 0
+        store_id = 1
+        devices = self.get_argument('devices','no')
+        if devices != 'no':
+            request_type = 1
+        else:
+            store_id = self.get_argument('store_id', 1)
+            request_type = 2
+
         session = Session()
         resdic = {}
         try:
-            result = session.query(func.date_format(Deal.datetime, '%Y-%m'), \
-                                   func.count('*'),
-                                   func.sum(Deal.total_price)).\
-                             filter(Deal.time.between(start_time, end_time), \
-                                        Deal.device_sn.in_(devices_list)).\
-                             group_by(func.date_format(Deal.datetime, '%Y-%m')).all()
+            if request_type == 1:
+                devices_list = eval(devices)
+                result = session.query(func.date_format(Deal.datetime, '%Y-%m'), \
+                                       func.count('*'),
+                                       func.sum(Deal.total_price),
+                                       func.sum(Deal.tax)).\
+                                 filter(Deal.time.between(start_time, end_time), \
+                                            Deal.device_sn.in_(devices_list)).\
+                                 group_by(func.date_format(Deal.datetime, '%Y-%m')).all()
+
+                amount_result = session.query(
+                                       func.count('*'),
+                                       func.sum(Deal.total_price),
+                                       func.sum(Deal.tax)).\
+                                 filter(Deal.time.between(start_time, end_time), \
+                                              Deal.device_sn.in_(devices_list)).all()
+            else:
+                result = session.query(func.date_format(Deal.datetime, '%Y-%m'), \
+                                       func.count('*'),
+                                       func.sum(Deal.total_price),
+                                       func.sum(Deal.tax)). \
+                    filter(Deal.time.between(start_time, end_time), \
+                           Deal.store_id==store_id). \
+                    group_by(func.date_format(Deal.datetime, '%Y-%m')).all()
+
+                amount_result = session.query(
+                    func.count('*'),
+                    func.sum(Deal.total_price),
+                    func.sum(Deal.tax)). \
+                    filter(Deal.time.between(start_time, end_time), Deal.store_id == store_id).all()
+
         except Exception,e:
             session.rollback()
 
@@ -313,6 +455,7 @@ class StatisticsYearHandler(tornado.web.RequestHandler):
             dates = []
             counts = []
             totals = []
+            taxs = []
 
             days = get_months(int(start_time/1000),int(end_time/1000))
 
@@ -326,16 +469,39 @@ class StatisticsYearHandler(tornado.web.RequestHandler):
                 if index == -1:
                     counts.append(0)
                     totals.append(0)
+                    taxs.append(0)
                 else:
                     temp = result[index]
 
                     counts.append(temp[1])
                     totals.append(int(temp[2]))
+                    taxs.append(int(temp[3]))
 
             data = {}
             data['dates'] = dates
             data['counts'] = counts
             data['totals'] = totals
+            data['taxs'] = taxs
+
+
+            amount_list = amount_result[0]
+
+            if amount_list[0]:
+                data['count_total'] = int(amount_list[0])
+            else:
+                data['count_total'] = 0
+
+            if amount_list[1]:
+                data['total_total'] = int(amount_list[1])
+            else:
+                data['total_total'] = 0
+
+
+            if amount_list[2]:
+                data['tax_total'] = int(amount_list[2])
+            else:
+                data['tax_total'] = 0
+
 
             resdic['code'] = 0
             resdic['message'] = 'success'
@@ -355,21 +521,50 @@ class StatisticsYearHandler(tornado.web.RequestHandler):
 
 class StatisticsMonthHandler(tornado.web.RequestHandler):
     def get(self):
-        devices = self.get_argument('devices')
-
-        devices_list = eval(devices)
-
         start_time = int(self.get_argument('start_time'))
         end_time = int(self.get_argument('end_time'))
+        request_type = 0
+        store_id = 1
+        devices = self.get_argument('devices','no')
+        if devices != 'no':
+            request_type = 1
+        else:
+            store_id = self.get_argument('store_id', 1)
+            request_type = 2
+
         session = Session()
         resdic = {}
         try:
-            result = session.query(func.date_format(Deal.datetime, '%Y-%m-%d'), \
-                                   func.count('*'),
-                                   func.sum(Deal.total_price)). \
-                filter(Deal.time.between(start_time, end_time), \
-                            Deal.device_sn.in_(devices_list)). \
-                group_by(func.date_format(Deal.datetime, '%Y-%m-%d')).all()
+            if request_type == 1:
+                devices_list = eval(devices)
+                result = session.query(func.date_format(Deal.datetime, '%Y-%m-%d'), \
+                                       func.count('*'),
+                                       func.sum(Deal.total_price),
+                                       func.sum(Deal.tax)).\
+                                 filter(Deal.time.between(start_time, end_time), \
+                                            Deal.device_sn.in_(devices_list)).\
+                                 group_by(func.date_format(Deal.datetime, '%Y-%m-%d')).all()
+
+                amount_result = session.query(
+                                       func.count('*'),
+                                       func.sum(Deal.total_price),
+                                       func.sum(Deal.tax)).\
+                                 filter(Deal.time.between(start_time, end_time), \
+                                              Deal.device_sn.in_(devices_list)).all()
+            else:
+                result = session.query(func.date_format(Deal.datetime, '%Y-%m-%d'), \
+                                       func.count('*'),
+                                       func.sum(Deal.total_price),
+                                       func.sum(Deal.tax)). \
+                    filter(Deal.time.between(start_time, end_time), \
+                           Deal.store_id==store_id). \
+                    group_by(func.date_format(Deal.datetime, '%Y-%m-%d')).all()
+
+                amount_result = session.query(
+                    func.count('*'),
+                    func.sum(Deal.total_price),
+                    func.sum(Deal.tax)). \
+                    filter(Deal.time.between(start_time, end_time), Deal.store_id == store_id).all()
         except Exception, e:
             session.rollback()
 
@@ -382,6 +577,7 @@ class StatisticsMonthHandler(tornado.web.RequestHandler):
             dates = []
             counts = []
             totals = []
+            taxs = []
 
             days = get_days(int(start_time / 1000), int(end_time / 1000))
 
@@ -395,16 +591,37 @@ class StatisticsMonthHandler(tornado.web.RequestHandler):
                 if index == -1:
                     counts.append(0)
                     totals.append(0)
+                    taxs.append(0)
                 else:
                     temp = result[index]
 
                     counts.append(temp[1])
                     totals.append(int(temp[2]))
+                    taxs.append(int(temp[3]))
 
             data = {}
             data['dates'] = dates
             data['counts'] = counts
             data['totals'] = totals
+            data['taxs'] = taxs
+
+            amount_list = amount_result[0]
+
+            if amount_list[0]:
+                data['count_total'] = int(amount_list[0])
+            else:
+                data['count_total'] = 0
+
+            if amount_list[1]:
+                data['total_total'] = int(amount_list[1])
+            else:
+                data['total_total'] = 0
+
+
+            if amount_list[2]:
+                data['tax_total'] = int(amount_list[2])
+            else:
+                data['tax_total'] = 0
 
             resdic['code'] = 0
             resdic['message'] = 'success'
@@ -420,6 +637,7 @@ class StatisticsMonthHandler(tornado.web.RequestHandler):
                 self.add_header("Access-Control-Allow-Origin", orgin)
             self.add_header("Access-Control-Allow-Credentials", 'true')
             self.write(json_rsp)
+
 
 class StoreHandler(tornado.web.RequestHandler):
     def get(self):
@@ -441,7 +659,7 @@ class StoreHandler(tornado.web.RequestHandler):
             store = session.query(Store).filter_by(sn=store_id).first()
         except Exception,e:
             session.rollback()
-            print e
+            logger.info(e)
             resdic = {}
             resdic['code'] = 101
             resdic['message'] = 'devices failed'

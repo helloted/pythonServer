@@ -6,7 +6,7 @@ caohaozhi@swindtech.com
 交易模型
 """
 
-from sqlalchemy import Column, Integer, String, BigInteger, ForeignKey,JSON,DateTime
+from sqlalchemy import Column, Integer, String, BigInteger, ForeignKey,JSON,DateTime,TEXT
 from super_models.database import Base
 
 class Deal(Base):
@@ -17,10 +17,16 @@ class Deal(Base):
     time = Column(BigInteger,index=True)
     datetime = Column(DateTime)
     total_price = Column(Integer)
+    tax = Column(Integer)
     remark = Column(String(200))
+
+    orgin = Column(TEXT)
+
+    orgin_id = Column(String(64))
 
     device_sn = Column(String(32), ForeignKey('device.sn'),index=True)
     store_id = Column(BigInteger, ForeignKey('store.store_id'))
+    store_name = Column(String(64))
 
     items_list = Column(JSON)
 

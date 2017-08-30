@@ -48,7 +48,7 @@ result_item = ["切割后的指令item"， {订单}]
 """
 
 
-def add_qr(result):
+def add_qr(serial_num, result):
     time_stamp = utils.get_millisecond()
     for i in range(len(result)):
         result_item = result[i]
@@ -56,7 +56,7 @@ def add_qr(result):
         logo = result_item[1]
         order = result_item[2]
         if order is not None:
-            logger.debug("是订单 追加二维码...追加切刀...")
+            logger.debug("  是订单 追加二维码...追加切刀...")
             # 检查时间戳
             t = order.get("time")
             if t is None or t == 0:
@@ -70,7 +70,9 @@ def add_qr(result):
             cmd_item = cmd_item + " " + gen_qr_cmd(order)
             # 追加切刀
             cmd_item = cmd_item + " " + get_cut_cmd.get_local_cut_cmd()
-            logger.info('切刀')
+            # 是否还原到居左对齐  justification
+            cmd_item = set_justification(serial_num, cmd_item)
+
         else:
             logger.debug("不是订单,追加切刀")
             cmd_item = cmd_item + " " + get_cut_cmd.get_local_cut_cmd()
@@ -79,11 +81,18 @@ def add_qr(result):
         result_item_dict.setdefault("logo_data", logo)
         result_item_dict.setdefault("order", order)
         result[i] = result_item_dict
-    logger.debug("追加二维码完成:")
+    logger.debug("追加结束:")
     for r in result:
         logger.debug(r)
     return result
 
+
+def set_justification(serial_num, cmd_item):
+    if serial_num == '6201001000001':
+        cmd_item = cmd_item + "1B 61 00 "
+    elif serial_num == '6201001000004':
+        cmd_item = cmd_item + "1B 61 00 "
+    return cmd_item
 
 if __name__ == "__main__":
     print gen_qr_cmd("ffff")

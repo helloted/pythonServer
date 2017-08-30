@@ -9,10 +9,13 @@ if __name__ == "__main__":
 
     pass
 
-    import sys
 
-    if False:
-        print "fdsf"
+    lst = [1,1,1,2]
+
+    print lst.count(1)
+
+
+
 
 
 

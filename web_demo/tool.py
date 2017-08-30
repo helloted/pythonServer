@@ -10,7 +10,7 @@ from redis_manager import redis_center
 import requests
 
 headers = {'Origin': '127.0.0.1'}
-
+#
 # url = 'http://127.0.0.1:5041/'
 
 url = 'http://47.74.130.48:8041/'
@@ -20,7 +20,7 @@ def statistics():
     global url
     url = url + 'statistics/devices'
     current_milli_time = lambda: int(round(time.time() * 1000))
-    textmod = {'devices': ['6201001000001',], 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 6 , 'end_time': current_milli_time()}
+    textmod = {'store_id': 4, 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 6 , 'end_time': current_milli_time()}
     print textmod
     textmod = urllib.urlencode(textmod)
     print(textmod)
@@ -33,7 +33,7 @@ def statistics_year():
     global url
     url = url + 'statistics/month'
     current_milli_time = lambda: int(round(time.time() * 1000))
-    textmod = {'store_id':4, 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 365 , 'end_time': current_milli_time()}
+    textmod = {'devices': [], 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 365 , 'end_time': current_milli_time()}
     print textmod
     textmod = urllib.urlencode(textmod)
     print(textmod)
@@ -46,7 +46,7 @@ def statistics_month():
     global url
     url = url + 'statistics/day'
     current_milli_time = lambda: int(round(time.time() * 1000))
-    textmod = {'store_id':1, 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 30 , 'end_time': current_milli_time()}
+    textmod = {'devices': ['6201001000006',], 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 30 , 'end_time': current_milli_time()}
     print textmod
     textmod = urllib.urlencode(textmod)
     print(textmod)
@@ -67,7 +67,8 @@ def store():
 def history_store():
     global url
     url = url + 'history/store'
-    textmod = {'store_sn': 'INA000000001','index':1,'amount':10}
+    current_milli_time = lambda: int(round(time.time() * 1000))
+    textmod = {'store_id': 4,'index':1,'amount':10,'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 30 , 'end_time': current_milli_time()}
     textmod = urllib.urlencode(textmod)
     print(textmod)
     req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
@@ -198,5 +199,29 @@ def onlines():
     res = urllib2.urlopen(req)
     print res.read()
 
+
+def history_offline():
+    global url
+    url = url + 'offline_historys'
+    textmod = {'start_time': int(time.time())-60*60*24 , 'end_time': int(time.time())}
+    print textmod
+    textmod = urllib.urlencode(textmod)
+    print(textmod)
+    req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
+    res = urllib2.urlopen(req)
+    print res.read()
+
+
+def all_store():
+    global url
+    url = url + 'stores'
+    textmod = {'region_code': 1}
+    textmod = urllib.urlencode(textmod)
+    print(textmod)
+    req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
+    res = urllib2.urlopen(req)
+    print res.read()
+
 if __name__ == '__main__':
-    statistics_year()
+    history_offline()
+

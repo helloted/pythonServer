@@ -23,9 +23,11 @@ def parse_format_price(num):
         temp = num
         if type(num) != str:
             temp = str(num)
-        temp = re.compile(r",").sub("", temp)
+        temp = re.compile(r"[,:]*").sub("", temp)
         if is_int_price(temp):
             return int(temp)
+        elif is_long_price(temp):
+            return long(temp)
         elif is_float_price(temp):
             return float(temp)
     except ValueError:
@@ -35,8 +37,17 @@ def parse_format_price(num):
 
 def is_int_price(ori):
     try:
-        temp = re.compile(r",").sub("", ori)
+        temp = re.compile(r",:").sub("", ori)
         int(temp)
+    except ValueError:
+        return False
+    return True
+
+
+def is_long_price(ori):
+    try:
+        temp = re.compile(r",:").sub("", ori)
+        long(temp)
     except ValueError:
         return False
     return True

@@ -46,7 +46,7 @@ def handel_data(data,tcp_socket):
             if cmd == 'update_token':
                 push_controller.received_update_token(data,tcp_socket)
             elif cmd == 'print_content':
-                push_controller.print_response(data)
+                push_controller.print_response(data,tcp_socket)
         else:
             logger.info('device:{device}, cmd:{cmd}, data:{data}'.format(device=tcp_socket.device_sn,cmd=cmd,data=data))
             if cmd == 'init_connect':

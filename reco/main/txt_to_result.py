@@ -6,6 +6,7 @@ import json
 import const
 
 from reco.handler import reco_good_line_handler
+from reco.handler import reco_subgood_line_handler
 from reco.handler import reco_id_line_handler
 from reco.handler import reco_tax_line_handler
 from reco.handler import reco_total_line_handler
@@ -31,6 +32,7 @@ class TxtToResult:
         _mobile_phone_keys = ori_data_dict.get(const.RECO_MOBILE_PHONE_KEYS)
         _landline_phone_keys = ori_data_dict.get(const.RECO_LANDLINE_PHONE_KEYS)
         _good_no = ori_data_dict.get(const.RECO_GOOD_NO)
+        _subgood_no = ori_data_dict.get(const.RECO_SUBGOOD_NO)
         _subtotal_keys = ori_data_dict.get(const.RECO_SUBTOTAL_KEYS)
         _tax_keys = ori_data_dict.get(const.RECO_TAX_KEYS)
         _total_keys = ori_data_dict.get(const.RECO_TOTAL_KEYS)
@@ -45,6 +47,7 @@ class TxtToResult:
         self._mobile_phone_keys = [] if _mobile_phone_keys is None else _mobile_phone_keys.split("#")
         self._landline_phone_keys = [] if _landline_phone_keys is None else _landline_phone_keys.split("#")
         self._good_no = 0 if _good_no is None else _good_no
+        self._subgood_no = 0 if _subgood_no is None else _subgood_no
         self._subtotal_keys = [] if _subtotal_keys is None else _subtotal_keys.split("#")
         self._tax_keys = [] if _tax_keys is None else _tax_keys.split("#")
         self._total_keys = [] if _total_keys is None else _total_keys.split("#")
@@ -60,6 +63,7 @@ class TxtToResult:
         self._mobile_phone_keys = keys.get(const.RECO_MOBILE_PHONE_KEYS)
         self._landline_phone_keys = keys.get(const.RECO_LANDLINE_PHONE_KEYS)
         self._good_no = keys.get(const.RECO_GOOD_NO)
+        self._subgood_no = keys.get(const.RECO_SUBGOOD_NO)
         self._subtotal_keys = keys.get(const.RECO_SUBTOTAL_KEYS)
         self._tax_keys = keys.get(const.RECO_TAX_KEYS)
         self._total_keys = keys.get(const.RECO_TOTAL_KEYS)
@@ -103,8 +107,21 @@ class TxtToResult:
         self._order_dict.setdefault(const.ORDER_TOTAL, None)
         self._order_dict.setdefault(const.ORDER_SUBTOTAL, None)
         self._order_dict.setdefault(const.ORDER_TAX, None)
-
+        # 字符串展示小票原本的格式
+        self._order_dict.setdefault(const.ORDER_TXT, txt)
+        # 时间戳
         self._order_dict[const.ORDER_TIME] = utils.get_millisecond()
+        # 检查计算tax
+        if self._order_dict.get(const.ORDER_TAX) is None or self._order_dict.get(const.ORDER_TAX) == 0:
+            if self._order_dict.get(const.ORDER_TOTAL) is not None:
+                tax = self._order_dict.get(const.ORDER_TOTAL) / 11
+                self._order_dict[const.ORDER_TAX] = int(round(tax))
+            else:
+                self._order_dict[const.ORDER_TAX] = 0
+        # ... ...
+
+        # 是否为订单(此字段必须在最后判断)
+        self._order_dict.setdefault(const.ORDER_IS_ORDER, self.check_is_order())
 
         return self._order_dict
 
@@ -158,6 +175,9 @@ class TxtToResult:
             # ID
             if reco_id_line_handler.is_id(items, self._id_keys):
                 order_id = reco_id_line_handler.get_id(items, self._id_keys)
+                if order_id is None:
+                    order_id = str(utils.get_millisecond())
+                order_id = self._serial_num + "_" + order_id
                 self._order_dict.setdefault(const.ORDER_ORDER_ID, order_id)
                 return
 
@@ -165,7 +185,6 @@ class TxtToResult:
         elif self._step == 1:
             # good
             good = dict()
-
             if self._good_no == 0:
                 pass
             elif self._good_no == 201:
@@ -184,21 +203,31 @@ class TxtToResult:
             elif self._good_no == 401:
                 if reco_good_line_handler.is_good_401(items):
                     good = reco_good_line_handler.get_good_401(items)
-                pass
             elif self._good_no == 402:
                 pass
             elif self._good_no == 403:
-                pass
-
+                if reco_good_line_handler.is_good_403(items):
+                    good = reco_good_line_handler.get_good_403(items)
             if good:
-                name = good.get(const.GOOD_NAME)
-                qty = good.get(const.GOOD_QTY)
-                unit_price = good.get(const.GOOD_UNIT_PRICE)
-                subtotal = good.get(const.GOOD_SUBTOTAL)
-                item_good = {const.GOOD_NAME: name, const.GOOD_QTY: qty, const.GOOD_UNIT_PRICE: unit_price, const.GOOD_SUBTOTAL: subtotal}
-                self._good_list.append(item_good)
+                self._good_list.append(good)
                 logger.debug(self._good_list)
                 return
+
+            # subgood
+            subgood = dict()
+            if self._subgood_no == 0:
+                pass
+            elif self._subgood_no == 301:
+                if reco_subgood_line_handler.is_subgood_301(items):
+                    subgood = reco_subgood_line_handler.get_subgood_301(items)
+            if subgood:
+                if self._good_list is not None and len(self._good_list) > 0:
+                    last_good = self._good_list[len(self._good_list)-1]
+                    subgood_list = last_good.get(const.GOOD_SUBGOOD_LIST)
+                    if subgood_list is None:
+                        subgood_list = []
+                    subgood_list.append(subgood)
+                    last_good[const.GOOD_SUBGOOD_LIST] = subgood_list
 
             # subtotal
             if reco_subtotal_line_handler.is_subtotal_line(items, self._subtotal_keys):
@@ -207,13 +236,13 @@ class TxtToResult:
                 return
 
             # tax
-            if reco_tax_line_handler.is_tax_line(items, "Tax1"):
+            if reco_tax_line_handler.is_tax_line(items, self._tax_keys):
                 tax = reco_tax_line_handler.get_tax(items)
                 self._order_dict.setdefault(const.ORDER_TAX, tax)
                 return
 
             # total
-            if reco_total_line_handler.is_total_line(items, "Total"):
+            if reco_total_line_handler.is_total_line(items, self._total_keys):
                 total = reco_total_line_handler.get_total(items)
                 self._order_dict.setdefault(const.ORDER_TOTAL, total)
                 return
@@ -223,6 +252,14 @@ class TxtToResult:
                 time = reco_time_line_handler.get_time(items, self._time_keys)
                 self._order_dict.setdefault(const.ORDER_TIME, time)
                 return
+
+    # 判断是否为一个订单
+    def check_is_order(self):
+        if self._order_dict is not None:
+            total = self._order_dict.get(const.ORDER_TOTAL)
+            if total is None or total == 0:
+                return False
+        return True
 
 if __name__ == "__main__":
     f = open(os.getcwd()+"/z_re.txt", "r")

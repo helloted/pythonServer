@@ -8,33 +8,30 @@ from reco.util import utils
 @:param keyword 用于判断改行是否为total行
 实用举例:
 Total                    30000
+Total      :             30000
+--  Total                30000
 """
 
 
-def is_total_line(items, keyword):
-    if keyword is None or len(keyword) == 0:
-        keyword == "total"
-    keyword = keyword.lower()
-    if len(items) == 2:
-        items[1].replace(":","").replace(".","")
-        items0 = str(items[0]).lower()
-        items1 = utils.parse_format_price(items[1])
-        if type(items0) == str and keyword in items0 \
-                and (type(items1) == int or type(items1) == float) and items1 > 1:
+def is_total_line(items, keys):
+    if len(items) >= 2:
+        for key in keys:
+            if key not in items:
+                return False
+
+        price = utils.parse_format_price(items[len(items)-1])
+        if type(price) == int or type(price) == float:
             return True
     return False
 
 
 def get_total(items):
-    if len(items) == 2:
-        subtotal = utils.parse_format_price(items[1])
-        return subtotal
-    return None
+    return utils.parse_format_price(items[len(items)-1])
 
 
 if __name__ == "__main__":
     print "开始"
-    lst = ["Total", "999,,.99999"]
-    print is_total_line(lst, "total")
+    lst = ["Total", ":", "999,,.99999"]
+    print is_total_line(lst, ["Total"])
     print get_total(lst)
     print "结束"

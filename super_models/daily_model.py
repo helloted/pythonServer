@@ -18,3 +18,19 @@ class Daily(Base):
 
     total_device = Column(Integer)
     online_device = Column(Integer)
+
+
+class StoreDaily(Base):
+    __tablename__ = 'store_daily'
+
+    id = Column(BigInteger, primary_key=True)
+    time = Column(BigInteger,index=True)
+    datetime = Column(DateTime)
+
+    store_id = Column(BigInteger)
+    store_name = Column(String(64))
+
+    total_price = Column(Integer)
+    total_tax = Column(Integer)
+
+    total_count = Column(Integer)

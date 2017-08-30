@@ -11,15 +11,14 @@ Tax1                    30000
 """
 
 
-def is_tax_line(items, keyword):
-    if keyword is None or len(keyword) == 0:
-        keyword == "Tax1"
-    keyword = keyword.lower()
-    if len(items) == 2:
-        items0 = str(items[0]).lower()
-        items1 = utils.parse_format_price(items[1])
-        if type(items0) == str and keyword in items0 \
-                and (type(items1) == int or type(items1) == float) and items1 > 100:
+def is_tax_line(items, keys):
+    if len(items) >= 2:
+        for key in keys:
+            if key not in items:
+                return False
+
+        tax = utils.parse_format_price(items[len(items)-1])
+        if type(tax) == int or type(tax) == float:
             return True
     return False
 

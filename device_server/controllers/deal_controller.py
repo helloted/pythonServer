@@ -8,12 +8,13 @@ caohaozhi@swindtech.com
 
 from super_models.deal_model import Deal
 from super_models.database import Session
+from super_models.store_model import Store
 import hashlib
 from log_util.device_logger import logger
 from device_server.utils.comment import b64_aes_dec, aes_enc_b64
 from device_server.response.res import success_response, succss_response_content,fail_response,fail_response_with_str,response
 from device_server.response import errors
-from redis_manager import redis_center
+from redis_manager import redis_center,r_store_info
 import json
 from datetime import datetime
 from reco.main.reco_main import RecoMain
@@ -93,6 +94,7 @@ def upload_deal(data,tcp_socket):
             live['deal_sn'] = deal_sn
             live['time'] = deal_time
             live['total_price'] = total_price
+            live['tax'] = total_price * 0.1
 
             channel = 'live_deal' + str(tcp_socket.store_id)
 
@@ -105,6 +107,9 @@ def upload_deal(data,tcp_socket):
 
 
 def save_order(order,device_sn,store_id):
+    is_valid_order = order.get('is_valid_order')
+    if not is_valid_order:
+        return
     total_price = order.get('total')
     if not total_price:
         total_price=0
@@ -114,16 +119,49 @@ def save_order(order,device_sn,store_id):
     deal = Deal()
     deal.sn = order.get('sn')
     deal.time = order.get('time')
+    deal.tax = order.get('tax')
+    deal.orgin = order.get('txt_data')
+
+    orgin_id = order.get('order_id')
+
+    session = Session()
+
+    if not orgin_id:
+        return
+    else:
+        try:
+            old_deal = session.query(Deal).filter_by(orgin_id=orgin_id).first()
+        except Exception,e:
+            logger.info(e)
+        else:
+            if old_deal:
+                logger.info('same_order_id', orgin_id)
+                return
+        finally:
+            session.close()
+
+
+
     if not deal.time:
         deal.time = 0
     deal.datetime = datetime.fromtimestamp(int(int(deal.time) / 1000))
 
-    deal.device_sn = device_sn
     deal.store_id = store_id
+    store_name = r_store_info.get(str(store_id))
+    if not store_name:
+        store = session.query(Store).filter_by(store_id=store_id).first()
+        if store:
+            store_name = store.name
+        else:
+            store_name = ''
+
+        r_store_info.set(str(store_id),store_name)
+
+    deal.device_sn = device_sn
     deal.total_price = int(total_price)
     deal.items_list = json.dumps(itmes_list)
+    deal.orgin_id = orgin_id
 
-    session = Session()
     session.add(deal)
 
     try:
@@ -139,6 +177,7 @@ def save_order(order,device_sn,store_id):
         live['deal_sn'] = deal.sn
         live['time'] = deal.time
         live['total_price'] = total_price
+        live['tax'] = deal.tax
 
         channel = 'live_deal' + str(store_id)
 

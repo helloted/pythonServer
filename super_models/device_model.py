@@ -46,6 +46,8 @@ class Device(Base):
 
     app_version = Column(String(32),default='')
     newest_url = Column(String(128),default='')
+    logo_urls = Column(JSON)
+    logo_new = Column(Boolean)
 
 
 class SeedToken(Base):

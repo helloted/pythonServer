@@ -107,7 +107,6 @@ class DevicesHandler(tornado.web.RequestHandler):
         amount_int = int(amount)
         offset = (page_int-1) * amount_int
 
-
         with SessionContext() as session:
             devices = session.query(Device).limit(amount_int).offset(offset).all()
             total = session.query(Device).count()

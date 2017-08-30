@@ -34,6 +34,11 @@ def get_cmd_100_1d56():
 
 
 def get_cmd_200_1b6d():
-    cut_cmd_list = ["1B 6D"]
+    cut_cmd_list = ["1B 6D", "1B 6D 00", "1B 6D 01", "1B 6D 48", "1B 6D 49", "1B 6D 0D"]
+    base = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F"]
+    for i in range(len(base)):
+        cut_cmd_list.append("1B 6D 65 " + base[i])
+        cut_cmd_list.append("1B 6D 66 " + base[i])
+    cut_cmd_list.reverse()
     return cut_cmd_list
 

@@ -10,4 +10,4 @@ import device_model
 import deal_model
 import id_model
 import daily_model
-
+import history_model

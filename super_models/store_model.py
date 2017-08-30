@@ -10,12 +10,15 @@ class Store(Base):
 
     store_id = Column(BigInteger, nullable=False,unique=True)
 
+    store_sn = Column(String(64))
+
     devices = relationship("Device", backref="store")
     deals = relationship("Deal", backref="store")
 
     region_code = Column(Integer)
+    region = Column(String(64))
 
-    district = Column(String(64))
+
     icon = Column(String(128))
 
     name = Column(String(50))
@@ -25,6 +28,8 @@ class Store(Base):
     lng = Column(DECIMAL(13,10),default=0)
 
     lat = Column(DECIMAL(13,10),default=0)
+
+    district = Column(String(64))
 
     score = Column(Float,default=4.0)
     per = Column(Integer,default=0)

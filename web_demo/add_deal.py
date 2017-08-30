@@ -11,6 +11,7 @@ from super_models.database import Session
 import gevent
 
 def insert_deal(device_sn,store_id,deal_time):
+    print 'insert'
     meal1 = ['Ginger & Pineapple Chicken',50000]
     meal2 = ['Kung Pao Chicken',78000]
     meal3 = ['prawn cocktail',54000]
@@ -76,6 +77,7 @@ def insert_deal(device_sn,store_id,deal_time):
         deal.device_sn = device_sn
         deal.store_id = store_id
         deal.total_price = int(total)
+        deal.tax = deal.total_price * 0.1
         deal.items_list = json.dumps(items_list)
         session.add(deal)
         session.commit()
@@ -99,15 +101,15 @@ def get_days(begin_time,end_time):
 
 def add_year_deal():
     now = int(time.time())
-    start = now - 60 * 60 * 24 * 1
+    start = now - 60 * 60 * 24 * 390
 
     date_list = get_days(start,now)
-    time_str = date_list[0]
-    zero = int(time.mktime(time.strptime(time_str,'%Y-%m-%d %H:%M:%S')))
-    start = zero + 60 * 60 * 9
-    end = zero + 60 * 60 * 20
-    add_every_day(start,end)
-
+    for time_str in  date_list:
+        zero = int(time.mktime(time.strptime(time_str,'%Y-%m-%d %H:%M:%S')))
+        start = zero + 60 * 60 * 9
+        end = zero + 60 * 60 * 20
+        print time_str
+        add_every_day(start,end)
 
 
 def add_every_day(start,end):
@@ -121,7 +123,7 @@ def add_every_day(start,end):
 
 def device_auto_6():
     while True:
-        gevent.sleep(random.randint(30,600))
+        gevent.sleep(random.randint(1,3))
         current_milli_time = lambda: int(round(time.time() * 1000))
         deal_time = current_milli_time()
         insert_deal('6201001000006',3,deal_time)
@@ -129,7 +131,7 @@ def device_auto_6():
 
 def device_auto_7():
     while True:
-        gevent.sleep(random.randint(30,600))
+        gevent.sleep(random.randint(1,3))
         current_milli_time = lambda: int(round(time.time() * 1000))
         deal_time = current_milli_time()
         insert_deal('6201001000007',3,deal_time)
@@ -137,7 +139,7 @@ def device_auto_7():
 
 def device_auto_8():
     while True:
-        gevent.sleep(random.randint(30,600))
+        gevent.sleep(random.randint(1,3))
         current_milli_time = lambda: int(round(time.time() * 1000))
         deal_time = current_milli_time()
         insert_deal('6201001000008',4,deal_time)
@@ -151,5 +153,5 @@ def auto_device():
 
 
 if __name__ == "__main__":
-    add_year_deal()
+    auto_device()
 

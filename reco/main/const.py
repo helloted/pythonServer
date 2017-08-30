@@ -19,17 +19,27 @@ ORDER_TAX = "tax"
 ORDER_ITEMS = "items"
 ORDER_SN = "sn"
 ORDER_QR = "qr"
+ORDER_TXT = "txt_data"
+ORDER_IS_ORDER = "is_order"
+ORDER_IS_VALID_ORDER = "is_valid_order"
 
 # 商品中可能用到的字段
-GOOD_NAME = "name"               # 商品名
-GOOD_QTY = "quantity"            # 份数
-GOOD_UNIT_PRICE = "unit_price"   # 单价
-GOOD_SUBTOTAL = "subtotal"       # 单价*份数
+GOOD_NAME = "name"                      # 商品名
+GOOD_QTY = "quantity"                   # 份数
+GOOD_UNIT_PRICE = "unit_price"          # 单价
+GOOD_SUBTOTAL = "subtotal"              # 单价*份数
+GOOD_SUBGOOD_LIST = "subgood_list"      # 单价*份数
+# 商品中搭配商品
+SUBGOOD_NAME = "subgood_name"                   # 搭配商品 名字
+SUBGOOD_QTY = "subgood_quantity"                # 搭配商品 份数
+SUBGOOD_UNIT_PRICE = "subgood_unit_price"       # 搭配商品 单价
+SUBGOOD_TOTAL_PRICE = "subgood_total_price"     # 搭配商品 总价
 
 
 # 解析keys
 RECO_SERIAL_NUM = "serial_num"
 RECO_CMD_NO = "cmd_no"
+RECO_CUT_CMD_NO = "cut_cmd_no"
 RECO_ORDER_KEYS = "order_keys"
 RECO_TITLE_KEYS = "title_keys"
 RECO_ID_KEYS = "id_keys"
@@ -38,6 +48,7 @@ RECO_EMAIL_KEYS = "email_keys"
 RECO_MOBILE_PHONE_KEYS = "mobile_phone_keys"
 RECO_LANDLINE_PHONE_KEYS = "landline_phone_keys"
 RECO_GOOD_NO = "good_no"
+RECO_SUBGOOD_NO = "subgood_no"
 RECO_SUBTOTAL_KEYS = "subtotal_keys"
 RECO_TAX_KEYS = "tax_keys"
 RECO_TOTAL_KEYS = "total_keys"

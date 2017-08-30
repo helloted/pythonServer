@@ -148,12 +148,25 @@ def is_good_403(items):
     if len(items) >= 4:
         if utils.is_int_price(items[0]) and int(items[0]) < 100 \
                 and isinstance(items[1], str) \
-                and utils.can_to_number(items[len(items) - 2]) and float(items[len(items) - 2]) > 100 \
-                and utils.can_to_number(items[len(items) - 1]) and float(items[len(items) - 1]) > 100 \
-                and (float(items[len(items) - 1])) % (float(items[len(items) - 2])) == 0:
+                and utils.can_to_number(items[len(items) - 2]) and utils.parse_format_price(items[len(items) - 2]) > 100 \
+                and utils.can_to_number(items[len(items) - 1]) and utils.parse_format_price(items[len(items) - 1]) > 100 \
+                and utils.parse_format_price(items[len(items) - 1]) % utils.parse_format_price(items[len(items) - 2]) == 0:
             return True
         else:
             return False
     else:
         return False
+
+
+def get_good_403(items):
+        qty = int(items[0])
+        name = " ".join(items[1 : len(items)-3])
+        unit_price = utils.parse_format_price(items[len(items)-2])
+        subtotal = utils.parse_format_price(items[len(items)-1])
+        good = dict()
+        good.setdefault(const.GOOD_NAME, name)
+        good.setdefault(const.GOOD_QTY, qty)
+        good.setdefault(const.GOOD_UNIT_PRICE, unit_price)
+        good.setdefault(const.GOOD_SUBTOTAL, subtotal)
+        return good
 

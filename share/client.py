@@ -15,7 +15,7 @@ port = 8050
 
 ADDR = (host, port)
 
-device_sn = "6201001000000"
+device_sn = "6201001000006"
 
 client = socket.socket()
 buffer = bytes()
@@ -109,6 +109,7 @@ def heart_beat():
         data2 = {"cmd": "heart_beat",
                  "seq": 3,
                  "version": "1",
+                 'content': {'changed': False}
                  }
 
         body = json.dumps(data2)

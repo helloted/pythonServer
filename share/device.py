@@ -22,7 +22,7 @@ ADDR = (host, port)
 client = socket.socket()
 client.connect(ADDR)
 
-device_sn = "6201001000003"
+device_sn = "6201001000000"
 
 def init_connect():
 
@@ -137,6 +137,7 @@ def heart_beat():
     data2 = {"cmd": "heart_beat",
              "seq": 3,
              "version": "1",
+             'content':{'changed':False}
              }
 
     body = json.dumps(data2)
@@ -155,10 +156,7 @@ def heart_beat():
 if __name__ == '__main__':
     init_connect()
     while True:
-        adddeal()
-        # #
-        # # time.sleep(random.randint(2, 20))
         time.sleep(5)
-        # heart_beat()
+        heart_beat()
 
 

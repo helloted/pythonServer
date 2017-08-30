@@ -23,10 +23,11 @@ import hashlib
 
 keep_socket = None
 
-def print_response(data):
+def print_response(data,tcp_socket):
     global keep_socket
+    device_sn = tcp_socket.device_sn
     send = success_response(data)
-    logger.info('received print content success')
+    logger.info('{device}  print content success'.format(device=device_sn))
     keep_socket.send(send)
 
 

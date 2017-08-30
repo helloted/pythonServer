@@ -63,6 +63,7 @@ def init_connect(data,tcp_socket,sockets):
             tcp_socket.store_id = device.store_id
 
             content = {}
+
             content['newest_setting_version'] = device.newest_setting_version
             content['wifi_name'] = device.wifi_name
             content['wifi_password'] = device.wifi_password
@@ -74,6 +75,10 @@ def init_connect(data,tcp_socket,sockets):
             content['ip_white_list'] = None
             content['bluetooth_white_list'] = None
             content['newest_url'] = device.newest_url
+            if device.logo_new:
+                if device.logo_urls:
+                    content['logo_urls'] = json.loads(device.logo_urls)
+                device.logo_new = False
             if device.ip_white_list:
                 content['ip_white_list'] = json.loads(device.ip_white_list)
 
@@ -118,11 +123,10 @@ def heart_beat(data,tcp_socket):
         with SessionContext() as session:
             device = session.query(Device).filter_by(sn=tcp_socket.device_sn).first()
             device.port_connecting = port_connecting
-            device.device_state = device_state
-            device.network_state = network_state
+            device.device_network_ststate = device_state
+            device.ate = network_state
 
             session.commit()
-
     send = success_response(data)
     device_sn = tcp_socket.device_sn
     device_redis.update_online_device(device_sn)

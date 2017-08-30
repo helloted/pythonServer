@@ -2,6 +2,7 @@ import random
 import json
 import sys, os; sys.path.append(os.path.realpath("../"))
 from super_models.deal_model import Deal
+from super_models.store_model import Store
 from share.tool import aes_enc_b64
 import hashlib
 import datetime
@@ -79,10 +80,11 @@ def insert_deal(device_sn,store_id,deal_time):
         deal.sn = deal_sn
         deal.time = deal_time
         deal.datetime = datetime.datetime.fromtimestamp(deal_time / 1000)
-
+        deal.store_name = 'KFC'
         deal.device_sn = device_sn
         deal.store_id = store_id
         deal.total_price = int(total)
+        deal.tax = int(total) * 0.1
         deal.items_list = json.dumps(items_list)
         session.add(deal)
         session.commit()
@@ -95,6 +97,7 @@ def insert_deal(device_sn,store_id,deal_time):
         live['deal_sn'] = deal_sn
         live['time'] = deal_time
         live['total_price'] = int(total)
+        live['tax'] = deal.tax
 
         channel = 'live_deal' + str(store_id)
 
