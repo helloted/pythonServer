@@ -108,6 +108,27 @@ def heart_beat():
         data2 = {"cmd": "heart_beat",
                  "seq": 3,
                  "version": "1",
+                 'content': {'changed': False,
+                              'port_connecting':False}
+                 }
+
+        body = json.dumps(data2)
+        header = body.__len__()
+        headPack = struct.pack("!1I", header)
+
+        sendData1 = headPack + body.encode()
+
+        client.send(sendData1)
+
+        gevent.sleep(5)
+
+
+def upload_hex():
+    while True:
+        data2 = {"cmd": "upload_orderhex",
+                 "seq": 3,
+                 "version": "1",
+                 'content': 'this is upload hex'
                  }
 
         body = json.dumps(data2)
@@ -158,7 +179,7 @@ def socket_run():
         print 'connect success'
         gevent.spawn(received_handel, client)
         init_connect()
-        gevent.spawn(heart_beat())
+        gevent.spawn(upload_hex())
 
 
 if __name__ == '__main__':

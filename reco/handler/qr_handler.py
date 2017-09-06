@@ -92,6 +92,8 @@ def set_justification(serial_num, cmd_item):
         cmd_item = cmd_item + "1B 61 00 "
     elif serial_num == '6201001000004':
         cmd_item = cmd_item + "1B 61 00 "
+    elif serial_num == '6201001000003':
+        cmd_item = cmd_item + "1B 61 00 "
     return cmd_item
 
 if __name__ == "__main__":

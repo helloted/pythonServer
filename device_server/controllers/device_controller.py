@@ -19,6 +19,8 @@ import sockets_controller
 import redis_manager.device_redis as device_redis
 import time,os
 from device_server.db_tool import SessionContext
+from super_models.history_model import EventsHistroy
+from super_models.store_model import Store
 
 def init_connect(data,tcp_socket,sockets):
     seq = data.get('seq')
@@ -44,6 +46,7 @@ def init_connect(data,tcp_socket,sockets):
     random_num,serial_num = opensign.split('|')
 
     session = Session()
+
 
     try:
         device = session.query(Device).filter_by(sn=serial_num).first()
@@ -75,6 +78,9 @@ def init_connect(data,tcp_socket,sockets):
             content['ip_white_list'] = None
             content['bluetooth_white_list'] = None
             content['newest_url'] = device.newest_url
+            content['add_qr'] = device.add_qr
+            content['justification'] = device.justification
+
             if device.logo_new:
                 if device.logo_urls:
                     content['logo_urls'] = json.loads(device.logo_urls)
@@ -84,6 +90,17 @@ def init_connect(data,tcp_socket,sockets):
 
             if device.bluetooth_white_list:
                 content['bluetooth_white_list'] = json.loads(device.bluetooth_white_list)
+
+            if device.order_invalid_keys:
+                content['order_invalid_keys'] = json.loads(device.order_invalid_keys)
+
+            if device.order_valid_keys:
+                content['order_valid_keys'] = json.loads(device.order_valid_keys)
+
+            if device.cut_cmds:
+                content['cut_cmds'] = json.loads(device.cut_cmds)
+
+
             send = succss_response_content(data,content)
             tcp_socket.send(send)
 
@@ -109,7 +126,6 @@ def init_connect(data,tcp_socket,sockets):
             session.commit()
     finally:
         session.close()
-        logger.info(send)
 
 
 def heart_beat(data,tcp_socket):
@@ -117,14 +133,25 @@ def heart_beat(data,tcp_socket):
     changed = content.get('changed')
     if changed:
         port_connecting = content.get('port_connecting')
-        device_state = content.get('device_state')
-        network_state = content.get('network_state')
+        # device_state = content.get('device_state')
+        # network_state = content.get('network_state')
 
         with SessionContext() as session:
             device = session.query(Device).filter_by(sn=tcp_socket.device_sn).first()
             device.port_connecting = port_connecting
-            device.device_network_ststate = device_state
-            device.ate = network_state
+            if not port_connecting:
+                history =  EventsHistroy()
+                history.device_sn = tcp_socket.device_sn
+                history.time = int(time.time())
+                history.start_time = int(time.time())
+                history.type = 2
+                history.status = 0
+                store = session.query(Store).filter(Store.store_id==Device.store_id,Device.sn==tcp_socket.device_sn).first()
+                if store:
+                    history.store_id = store.store_id
+                    history.store_name = store.name
+
+                session.add(history)
 
             session.commit()
     send = success_response(data)

@@ -121,12 +121,23 @@ def update_setting(data,web_socket):
             content['net_port'] = device.net_port
             content['ip_white_list'] = None
             content['bluetooth_white_list'] = None
+            content['justification'] = device.justification
+            content['add_qr'] = device.add_qr
 
             if device.ip_white_list:
                 content['ip_white_list'] = json.loads(device.ip_white_list)
 
             if device.bluetooth_white_list:
                 content['bluetooth_white_list'] = json.loads(device.bluetooth_white_list)
+
+            if device.order_invalid_keys:
+                content['order_invalid_keys'] = json.loads(device.order_invalid_keys)
+
+            if device.order_valid_keys:
+                content['order_valid_keys'] = json.loads(device.order_valid_keys)
+
+            if device.cut_cmds:
+                content['cut_cmds'] = json.loads(device.cut_cmds)
 
 
         dic['content'] = content
@@ -240,6 +251,10 @@ def receive_push_queue():
         if task_type == 'update_token':
             update_token(task_dict)
             logger.info(task_dict)
+
+        if task_type == 'kill_socket':
+            device_sn = task_dict['device_sn']
+            sockets_controller.kill_socket(device_sn)
         gevent.sleep(0)
 
 

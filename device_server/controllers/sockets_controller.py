@@ -2,6 +2,7 @@
 
 from gevent._socket2 import _closedsocket
 from log_util.device_logger import logger
+import socket
 
 sockets_dict = {}
 
@@ -32,6 +33,18 @@ def get_socket(device_sn):
     #     return None
     # else:
     #     return tcp_socket
+
+
+def kill_socket(device_sn):
+    the_socket = get_socket(device_sn)
+    if the_socket:
+        the_socket.shutdown(socket.SHUT_WR)
+        the_socket.close()
+        sockets_dict.pop(device_sn)
+        logger.info(('killed the socket',device_sn))
+    else:
+        print 'kill failed'
+
 
 
 def pop_socket(device_sn):

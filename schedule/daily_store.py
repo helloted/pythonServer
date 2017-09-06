@@ -47,8 +47,16 @@ def save_daily():
 
             ave = session.query(func.avg(StoreDaily.total_price)).filter(StoreDaily.time.in_(pass_dates),StoreDaily.store_id==store_daily.store_id).scalar()
 
+            if not ave:
+                ave = session.query(StoreDaily.total_price).filter(
+                    StoreDaily.time == yesterday_zero_time / 1000 - 60 * 60 * 24,
+                    StoreDaily.store_id == store_daily.store_id).scalar()
+
+            if not ave:
+                ave = 0
+
             if ave:
-                value = ave - store_daily.total_price
+                value = store_daily.total_price - ave
                 float_value = float(value) / float(ave)
                 if float_value > 0.1 or float_value < -0.1:
                     history = EventsHistroy()
@@ -58,7 +66,7 @@ def save_daily():
                     history.status = 0
                     history.value = value
                     history.float_value = float_value
-                    history.time = yesterday_zero_time / 1000
+                    history.time = yesterday_24_time / 1000 - 1
                     session.add(history)
 
         session.commit()

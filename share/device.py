@@ -137,7 +137,7 @@ def heart_beat():
     data2 = {"cmd": "heart_beat",
              "seq": 3,
              "version": "1",
-             'content':{'changed':False}
+             'content':{'changed':True}
              }
 
     body = json.dumps(data2)

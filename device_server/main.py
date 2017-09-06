@@ -59,6 +59,8 @@ def handel_data(data,tcp_socket):
                 dealController.upload_deal(data, tcp_socket)
             elif cmd == 'upload_capture':
                 dealController.upload_capture(data, tcp_socket)
+            elif cmd == 'upload_orderhex':
+                dealController.upload_orderhex(data,tcp_socket)
             elif cmd == 'request_app':
                 deviceController.request_app(data,tcp_socket)
             # else:

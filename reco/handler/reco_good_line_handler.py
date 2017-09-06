@@ -160,7 +160,7 @@ def is_good_403(items):
 
 def get_good_403(items):
         qty = int(items[0])
-        name = " ".join(items[1 : len(items)-3])
+        name = " ".join(items[1 : len(items)-2])
         unit_price = utils.parse_format_price(items[len(items)-2])
         subtotal = utils.parse_format_price(items[len(items)-1])
         good = dict()

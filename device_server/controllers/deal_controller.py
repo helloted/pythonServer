@@ -20,7 +20,9 @@ from datetime import datetime
 from reco.main.reco_main import RecoMain
 from redis_manager import r_upload_token
 import hashlib,os
-import traceback,time
+import traceback,time,imp
+from reco.main.reco_main_temp import RecoMain as TempRecoMain
+import StringIO, gzip
 
 
 def verify_sn(deal_sn,time,device_sn,seed_token):
@@ -135,7 +137,7 @@ def save_order(order,device_sn,store_id):
             logger.info(e)
         else:
             if old_deal:
-                logger.info('same_order_id', orgin_id)
+                logger.info('same_order_id:{orgin_id}'.format(orgin_id = orgin_id))
                 return
         finally:
             session.close()
@@ -186,6 +188,7 @@ def save_order(order,device_sn,store_id):
         session.close()
 
 def save_to_file(file_name, contents):
+    contents = str(contents)
     super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
 
     time_now = int(time.time())
@@ -226,7 +229,7 @@ def upload_capture(data,tcp_socket):
     except Exception,e:
         logger.error(e)
         save_to_file(tcp_socket.device_sn,content_str)
-        send = fail_response_with_str(data,traceback.format_exc())
+        send = fail_response_with_str(data,e.message)
         tcp_socket.send(send)
     else:
         resp_list = []
@@ -256,4 +259,121 @@ def upload_capture(data,tcp_socket):
             tcp_socket.send(send)
 
 
+def upload_orderhex(data,tcp_socket):
+    # version = data.get('version')
+    # if int(version) == 2:
+    #     compress = data.get('content')
+    #     content = gzdecode(compress)
+    #     print compress
+    #     print content
+    # else:
+    #     print version
+    #
+    # return
 
+    content = data.get('content')
+    try:
+        _reco_main = TempRecoMain(content)
+        result_dict = _reco_main.parse()
+    except Exception,e:
+        logger.error(e)
+        save_to_file(tcp_socket.device_sn,content)
+        logger.info(type(e.message))
+        send = fail_response_with_str(data,'parse error')
+        tcp_socket.send(send)
+    else:
+        if not result_dict:
+            send = fail_response_with_str(data, 'no parse result')
+            tcp_socket.send(send)
+            return
+
+        resp_list = []
+        try:
+            success = result_dict.get('status')
+            order_list = result_dict.get('order_list')
+            if not success:
+                logger.info('convert result status not success')
+                save_to_file(tcp_socket.device_sn, content)
+                send = fail_response_with_str(data, 'Result status is False')
+                tcp_socket.send(send)
+                return
+            for result in order_list:
+                order = result.get('order')
+                if order:
+                    save_order(order,tcp_socket.device_sn,tcp_socket.store_id)
+                result.pop('order')
+                resp_list.append(result)
+        except Exception,e:
+            logger.error(e)
+            logger.info('save order error')
+            save_to_file(tcp_socket.device_sn, content)
+            send = fail_response_with_str(data, e.message)
+            tcp_socket.send(send)
+        else:
+            respon = success_response(data)
+            tcp_socket.send(respon)
+
+def gzdecode(data) :
+    compressedstream = StringIO.StringIO(data)
+    gziper = gzip.GzipFile(fileobj=compressedstream)
+    result = gziper.read()   # 读取解压缩后数据
+    return result
+
+def pass_to_conversion(tcp_socket,data):
+    compress = data.get('content')
+    content = gzdecode(compress)
+
+
+    superPath = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,os.pardir))
+    folderPath = superPath + '/conversion_scripts/'
+    script_name = '{device_sn}.py'.format(device_sn=tcp_socket.device_sn)
+    scriptPath = folderPath + script_name
+
+    # 判断是否存在脚本
+    try:
+        py_module = imp.load_source('module.name', scriptPath)
+    except Exception,e:
+        logger.error('no such convert script')
+    else:
+        try:
+            result_dict = py_module.format_convert(content)
+        except Exception,e:
+            logger.info(e)
+            logger.error('format_convert failed')
+        else:
+            if not result_dict:
+                send = fail_response_with_str(data, 'no parse result')
+                tcp_socket.send(send)
+                return
+
+            resp_list = []
+            try:
+                success = result_dict.get('status')
+                order_list = result_dict.get('order_list')
+                if not success:
+                    logger.info('convert result status not success')
+                    save_to_file(tcp_socket.device_sn, content)
+                    send = fail_response_with_str(data, 'Result status is False')
+                    tcp_socket.send(send)
+                    return
+                for result in order_list:
+                    order = result.get('order')
+                    if order:
+                        save_order(order, tcp_socket.device_sn, tcp_socket.store_id)
+                    result.pop('order')
+                    resp_list.append(result)
+            except Exception, e:
+                logger.error(e)
+                logger.info('save order error')
+                save_to_file(tcp_socket.device_sn, content)
+                send = fail_response_with_str(data, e.message)
+                tcp_socket.send(send)
+            else:
+                respon = success_response(data)
+                tcp_socket.send(respon)
+
+
+
+
+# if __name__ == '__main__':
+#     pass_to_conversion('600001','hello')
