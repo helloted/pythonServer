@@ -1,3 +1,4 @@
+#coding=utf-8
 import os
 from flask import Flask, request, redirect, url_for
 from werkzeug import secure_filename
@@ -141,6 +142,48 @@ def upload_log():
     '''
 
 
+@app.route('/script', methods=['GET', 'POST'])
+def upload_script():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file:
+            filename = secure_filename(file.filename)
+            flod_path = super_path + '/conversion_scripts'
+            if not os.path.exists(flod_path):
+                os.makedirs(flod_path)
+            try:
+                file.save(flod_path+'/'+filename)
+            except Exception,e:
+                re = {}
+                re['msg'] = 'failed'
+                re['code'] = 1
+                resp = json.dumps(re)
+                return Response(resp, mimetype='text/json')
+            else:
+                re = {}
+                re['msg'] = 'success'
+                re['code'] = 0
+                resp = json.dumps(re)
+                return Response(resp, mimetype='text/json')
+        else:
+            print 'no file'
+            re = {}
+            re['msg'] = 'no file'
+            re['code'] = 1
+            resp = json.dumps(re)
+            return Response(resp, mimetype='text/json')
+    return '''
+    <!doctype html>
+    <title>上传脚本</title>
+    <h1>上传订单解析脚本</h1>
+    <p>注意文件格式：'s_' + '设备号',如s_6201001000002.py </p>
+    <form action="" method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
+
+
 @app.route('/app', methods=['GET', 'POST'])
 def upload_app():
     print 'enter upload'
@@ -272,12 +315,12 @@ def upload():
                 return Response(resp, mimetype='text/json')
     return '''
     <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form action="" method=post enctype=multipart/form-data>
-      <p><input type=file name=file>
-         <input type=submit value=Upload>
-    </form>
+    <title>上传文件</title>
+    <h1>上传文件入口</h1>
+    <p>上传打印机Log：<a href='/log'>Log</a></p>
+    <p>上传打印机APP：<a href='/app'>APP</a></p>
+    <p>上传打印Logo：<a href='/logo'>Logo</a></p>
+    <p>上传订单解析脚本：<a href='/script'>脚本</a></p>
     '''
 
 @app.route('/restart', methods=['GET', 'POST'])

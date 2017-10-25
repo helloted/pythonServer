@@ -9,7 +9,7 @@ import time
 date = time.strftime("%Y%m%d")
 
 # 获取logger实例，如果参数为空则返回root logger
-logger = logging.getLogger()
+logger = logging.getLogger('device_server')
 
 formatter = logging.Formatter('%(asctime)s %(levelname)s  %(message)s --> %(filename)s(%(lineno)d)')
 

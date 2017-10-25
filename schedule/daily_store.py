@@ -6,6 +6,7 @@ import datetime,time
 from super_models.deal_model import Deal
 from sqlalchemy import func
 from super_models.history_model import EventsHistroy, OfflineHistroy
+from super_models.store_model import Store
 
 def save_daily():
     today = datetime.date.today()
@@ -19,7 +20,6 @@ def save_daily():
     try:
         results = session.query(
             Deal.store_id,
-            Deal.store_name,
             func.count('*'),
             func.sum(Deal.total_price),
             func.sum(Deal.tax)).\
@@ -31,13 +31,17 @@ def save_daily():
     else:
         for res in results:
             store_daily = StoreDaily()
-            store_daily.time = yesterday_zero_time/1000
-            store_daily.datetime = datetime.datetime.fromtimestamp(yesterday_zero_time/1000)
+            store_daily.time = yesterday_24_time/1000 - 1
+            store_daily.datetime = datetime.datetime.fromtimestamp(store_daily.time)
             store_daily.store_id = int(res[0])
-            store_daily.store_name = res[1]
-            store_daily.total_count = int(res[2])
-            store_daily.total_price = int(res[3])
-            store_daily.total_tax = int(res[4])
+            # store_daily.store_name = res[1]
+            store_daily.total_count = int(res[1])
+            store_daily.total_price = int(res[2])
+            store_daily.total_tax = int(res[3])
+
+            store = session.query(Store).filter_by(store_id=int(res[0])).first()
+            store_daily.store_name = store.name
+
             session.add(store_daily)
 
             pass_dates = []

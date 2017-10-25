@@ -32,11 +32,3 @@ logger.addHandler(console_handler)
 
 # 指定日志的最低输出级别，默认为WARN级别
 logger.setLevel(logging.DEBUG)
-
-# # 输出不同级别的log
-# logger.debug('this is debug info')
-# logger.info('this is information')
-# logger.warn('this is warning message')
-# logger.error('this is error message')
-# logger.fatal('this is fatal message, it is same as logger.critical')
-# logger.critical('this is critical message')

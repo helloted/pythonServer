@@ -1,10 +1,5 @@
 import urllib,urllib2
 import json
-import datetime
-import time,random
-from log_util.device_logger import logger
-from redis_manager import redis_center
-# from device_server.controllers.push_device_controller import send_printer
 import requests
 
 headers = {'Origin': '127.0.0.1'}
@@ -20,7 +15,33 @@ def edit_status():
     resp = requests.post(url,json.dumps(paras),headers=headers)
     print resp.text
 
+def upload_log():
+    global url
+    url = url + 'device/upload_log'
+    paras = {'device_sn':'6201001000000','time':123456}
+    resp = requests.post(url,json.dumps(paras),headers=headers)
+    print resp.text
+
+
+def service_id():
+    global url
+    url = url + 'service/dealID_scan'
+    resp = requests.get(url)
+    print resp.text
+
+def deal_list():
+    global url
+    url = url + 'deal_convert/list'
+    resp = requests.get(url)
+    print resp.text
+
+def deal_event():
+    global url
+    url = url + 'deal_convert/event'
+    paras = {'deal_name':'62010010001001508835905ebffaf.txt','event':2}
+    resp = requests.post(url,json.dumps(paras),headers=headers)
+    print resp.text
+
 
 if __name__ == '__main__':
-    temp = ['hello','word']
-    print json.dumps(temp)
+    deal_list()

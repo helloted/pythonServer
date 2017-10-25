@@ -46,6 +46,9 @@ class AllStores(tornado.web.RequestHandler):
                 store_list = []
                 stores = session.query(Store).filter_by(district=district).all()
                 for store in stores:
+                    store_id = store.store_id
+                    if store_id == 8 or store_id == 2 or store_id == 6 or store_id ==7:
+                        continue
                     store_dict = {}
                     store_dict['store_id'] = store.store_id
                     store_dict['store_name'] = store.name

@@ -9,7 +9,7 @@ web_demo Server入口
 import sys, os; sys.path.append(os.path.realpath("../"))
 from tornado import web, httpserver, ioloop
 from tornado.options import options, define
-from handlers import HistoryDevicesHandler,HistoryStoreHandler,StoreHandler,DealDetailHandler,StatisticsDeviceHandler,HistoryDisctrictHandler
+from handlers import HistoryDevicesHandler,HistoryStoreHandler,StoreHandler,DealDetailHandler,StatisticsDeviceHandler,HistoryDistrictHandler
 from handlers import StatisticsYearHandler,StatisticsMonthHandler
 from live_handler import LiveHandler, PrintHandler
 import threading
@@ -27,7 +27,7 @@ def run_webserver():
                                     (r"/store", StoreHandler),
                                     (r"/history/devices", HistoryDevicesHandler),
                                     (r"/history/store", HistoryStoreHandler),
-                                    (r"/history/district", HistoryDisctrictHandler),
+                                    (r"/history/district", HistoryDistrictHandler),
                                     (r"/deal_detail", DealDetailHandler),
                                     (r"/print_content", PrintHandler),
                                     (r"/devices", DevicesHandler),
@@ -50,7 +50,7 @@ def run_webserver():
     ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':
-    socket_server_thread = threading.Thread(target=server_communicate.socket_run, name='socket_server_thread')
-    socket_server_thread.start()
+    # socket_server_thread = threading.Thread(target=server_communicate.socket_run, name='socket_server_thread')
+    # socket_server_thread.start()
 
     run_webserver()

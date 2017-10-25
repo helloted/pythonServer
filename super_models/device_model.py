@@ -81,7 +81,7 @@ class Device(Base):
     # 切刀命令
     cut_cmds = Column(JSON)
 
-    # 判定命令
+    # 判定命令,位置
     justification = Column(Integer)
 
 

@@ -1,5 +1,6 @@
 from log_util.device_logger import logger
 from super_models.database import Session
+import traceback
 
 class SessionContext():
 
@@ -13,6 +14,7 @@ class SessionContext():
         if exc_tb:
             self.session.rollback()
             logger.error(exc_val)
+            logger.error(traceback.format_exc())
             self.session.exc = True
             self.session.exc_val = exc_val
         return True

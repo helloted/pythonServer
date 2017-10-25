@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
 user = 'root'
-password = 'password'
+password = 'sql$HeF#pass'
 port = '3306'
 database_name = 'server'
 char = 'utf8'
@@ -14,7 +14,7 @@ char = 'utf8'
 data_url = 'mysql+pymysql://{user}:{password}@localhost:{port}/{database_name}'.format(**locals())
 
 # 最大连接处
-engine = create_engine(data_url,max_overflow=5,connect_args={'charset':'utf8'},echo=False)
+engine = create_engine(data_url,max_overflow=10,connect_args={'charset':'utf8'},echo=False)
 
 Base = declarative_base()
 

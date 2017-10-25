@@ -40,6 +40,15 @@ def b64_aes_dec(data,aes_key=None):
 
     return dec_data.rstrip('\0')
 
+def aes_decode(data,aes_key=None):
+    if not aes_key:
+       aes_key = '1234567890123456'
+
+    cipher = AES.new(aes_key)
+    dec_data = cipher.decrypt(data)
+
+    return dec_data.rstrip('\0')
+
 def head_pack(data):
     headPack = struct.pack("!1I", data.__len__())
     send = headPack+data

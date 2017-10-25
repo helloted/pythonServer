@@ -26,21 +26,52 @@ import json
 
 import socket
 
-sn = '62010010000011496832905442seed'
+from Crypto.Cipher import AES
+import base64
 
-def change():
-    print sn
-    # print ord('a')
-    for c in sn:
-        print c
+def aes_enc_b64(data,aes_key=None):
+    if not aes_key:
+       aes_key = '1234567890123456'
+    size = AES.block_size
+    count = size - len(data)%size
+    if count is not 0:
+        data+=(chr(0)*count)
+
+    cipher = AES.new(aes_key)
+    return base64.b64encode(cipher.encrypt(data))
+
+def b64_aes_dec(data,aes_key=None):
+    b64_data = base64.b64decode(data)
+
+    if not aes_key:
+       aes_key = '1234567890123456'
+
+    cipher = AES.new(aes_key)
+    dec_data = cipher.decrypt(b64_data)
+
+    return dec_data.rstrip('\0')
+
+def aes_encode(data):
+    aes_key = '1234567890123456'
+    size = AES.block_size
+    count = size - len(data)%size
+    if count is not 0:
+        data+=(chr(0)*count)
+
+    cipher = AES.new(aes_key)
+    return cipher.encrypt(data)
+
+def aes_decode(data):
+    aes_key = '1234567890123456'
+
+    cipher = AES.new(aes_key)
+    dec_data = cipher.decrypt(data)
+
+    return dec_data.rstrip('\0')
+
+
+from datetime import datetime
 
 if __name__ == '__main__':
-    session = Session()
-    devices = session.query(Device).all()
-    for dev in devices:
-        dev.cut_cmds = json.dumps(['1b 6d 0d'])
-        dev.order_invalid_keys = json.dumps(['*** Reprint ***'])
-        dev.order_valid_keys = json.dumps(['Cabang','Mulai'])
-
-    session.commit()
-
+    a = datetime.now().strftime('%Y-%m-%d %H:%M:%S_%f')
+    print type(a)

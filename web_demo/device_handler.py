@@ -5,7 +5,7 @@ from web_demo.db_tool import SessionContext
 from web_demo.web_response import success_resp,failed_resp,failed_resp_full
 from super_models.device_model import Device
 from super_models.store_model import Store
-from redis_manager import redis_center
+from redis_manager import redis_center,redis_web_device
 import redis_manager.device_redis as device_redis
 import time
 import json
@@ -124,8 +124,12 @@ class DevicesHandler(tornado.web.RequestHandler):
                 device['device_sn'] = dev.sn
 
                 store = session.query(Store).filter_by(store_id=dev.store_id).first()
-                device['store_id'] = store.store_id
-                device['store_name'] = store.name
+                if store:
+                    device['store_id'] = store.store_id
+                    device['store_name'] = store.name
+                else:
+                    device['store_id'] = 0
+                    device['store_name'] = 'no store'
 
                 device['online'] = device_redis.check_online(dev.sn)
 
@@ -179,6 +183,7 @@ class DeviceDetailHandler(tornado.web.RequestHandler):
                 data['app_version'] = device.app_version
                 data['port_connecting'] = device.port_connecting
                 data['add_qr'] = device.add_qr
+                data['justification'] = device.justification
 
                 wifi_list = device.wifi_list
                 data['wifi_list'] = []
@@ -186,8 +191,12 @@ class DeviceDetailHandler(tornado.web.RequestHandler):
                     data['wifi_list'] = json.loads(wifi_list)
 
                 store = session.query(Store).filter_by(store_id=device.store_id).first()
-                data['store_id'] = store.store_id
-                data['store_name'] = store.name
+                if store:
+                    data['store_id'] = store.store_id
+                    data['store_name'] = store.name
+                else:
+                    data['store_id'] = 0
+                    data['store_name'] = 'no store'
 
                 last_time = device_redis.get_last_online_time(device.sn)
                 if not last_time:
@@ -227,7 +236,7 @@ class DeviceDetailHandler(tornado.web.RequestHandler):
 
 
 class DeviceSettingHandler(tornado.web.RequestHandler):
-    @login_required
+    # @login_required
     def post(self):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
         headers = self.request.headers
@@ -268,7 +277,8 @@ class DeviceSettingHandler(tornado.web.RequestHandler):
                 session.commit()
                 session.result = success_resp()
 
-                redis_center.publish('cmd_setting',device.sn)
+                content = {'device_sn':device.sn}
+                redis_web_device.publish('cmd_setting', content)
 
             else:
                 session.result = failed_resp_full(2,'no such device')
@@ -306,7 +316,7 @@ class APPUpdateHandler(tornado.web.RequestHandler):
                 session.commit()
                 session.result = success_resp()
 
-                redis_center.publish('cmd_update_app',body)
+                redis_web_device.publish('cmd_update_app',body)
             else:
                 session.result = failed_resp_full(2,'no such device')
 

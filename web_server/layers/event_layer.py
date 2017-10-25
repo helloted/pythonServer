@@ -14,6 +14,7 @@ from web_server.response.resp import add_headers,success_response,failed_respons
 import time
 from redis_manager import r_store_info
 from super_models.store_model import Store
+from log_util.web_demo_logger import logger
 
 
 node_event=Blueprint('event_layer',__name__,)
@@ -102,8 +103,8 @@ def edit_status():
     if body and isinstance(body,str):
         body = eval(body)
 
-
-    print 'body',body
+    body = body.to_dict()
+    logger.debug(body)
 
     event_id = body.get('id')
     status = body.get('status')

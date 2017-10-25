@@ -5,7 +5,6 @@ import json
 import datetime
 import time,random
 from log_util.device_logger import logger
-from redis_manager import redis_center
 # from device_server.controllers.push_device_controller import send_printer
 import requests
 
@@ -46,7 +45,7 @@ def statistics_month():
     global url
     url = url + 'statistics/day'
     current_milli_time = lambda: int(round(time.time() * 1000))
-    textmod = {'devices': ['6201001000006',], 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 30 , 'end_time': current_milli_time()}
+    textmod = {'district':'Surabaya', 'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 30 , 'end_time': current_milli_time()}
     print textmod
     textmod = urllib.urlencode(textmod)
     print(textmod)
@@ -58,6 +57,18 @@ def store():
     global url
     url = url + 'store'
     textmod = {'store_sn': 'INA000000001'}
+    textmod = urllib.urlencode(textmod)
+    print(textmod)
+    req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
+    res = urllib2.urlopen(req)
+    print res.read()
+
+
+def histore_dis():
+    global url
+    url = url + 'history/district'
+    current_milli_time = lambda: int(round(time.time() * 1000))
+    textmod = {'district':'Bandung','index':1,'amount':10,'start_time': current_milli_time()-1000 * 60 * 60 * 24 * 30 , 'end_time': current_milli_time()}
     textmod = urllib.urlencode(textmod)
     print(textmod)
     req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
@@ -143,7 +154,7 @@ def print_content():
 
     global url
     url = url + 'print_content'
-    data = {"device_sn": '6201001000002','post_time':100, "content": dict}
+    data = {"device_sn": '6201001000000','post_time':100, "content": dict}
     headers = {'Content-Type': 'application/json'}
     request = urllib2.Request(url=url, headers=headers, data=json.dumps(data))
     response = urllib2.urlopen(request)
@@ -177,7 +188,7 @@ def device_setting():
     global url
     url = url + 'device_setting'
     paras = {'device_sn':'6201001000000','wifi_name':'HelloWifi','bluetooth_white_list':['456','4343'],'ip_white_list':'ip_white_list'}
-    resp = requests.post(url,json.dumps(paras))
+    resp = requests.post(url, json.dumps(paras), headers=headers)
     print resp.json()
 
 def update_app():
@@ -223,5 +234,5 @@ def all_store():
     print res.read()
 
 if __name__ == '__main__':
-    history_offline()
+    all_store()
 

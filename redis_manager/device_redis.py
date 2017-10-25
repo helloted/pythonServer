@@ -17,34 +17,35 @@ def get_last_online_time(device_sn):
         return 0
 
 def offline_history(device_sn,new_time):
-    last_time = get_last_online_time(device_sn)
-    peroid = new_time - last_time
-    if last_time != 0 and peroid > 120:
-        session = Session()
-        try:
-            store = session.query(Store).filter(Device.sn == device_sn, Store.store_id == Device.store_id).first()
-        except Exception, e:
-            print e
-        else:
-            history = EventsHistroy()
-            history.type = 1
-            history.status = 0
-            history.store_id = store.store_id
-            history.device_sn = device_sn
-            history.store_name = store.name
-            history.start_time = last_time
-            history.end_time = new_time
-            history.time = new_time
-            history.time_between = peroid
-            try:
-                session.add(history)
-                session.commit()
-            except Exception,e:
-                print e
-            finally:
-                session.close()
-        finally:
-            session.close()
+    print 'hello'
+    # last_time = get_last_online_time(device_sn)
+    # peroid = new_time - last_time
+    # if last_time != 0 and peroid > 120:
+    #     session = Session()
+    #     try:
+    #         store = session.query(Store).filter(Device.sn == device_sn, Store.store_id == Device.store_id).first()
+    #     except Exception, e:
+    #         print e
+    #     else:
+    #         history = EventsHistroy()
+    #         history.type = 1
+    #         history.status = 0
+    #         history.store_id = store.store_id
+    #         history.device_sn = device_sn
+    #         history.store_name = store.name
+    #         history.start_time = last_time
+    #         history.end_time = new_time
+    #         history.time = new_time
+    #         history.time_between = peroid
+    #         try:
+    #             session.add(history)
+    #             session.commit()
+    #         except Exception,e:
+    #             print e
+    #         finally:
+    #             session.close()
+    #     finally:
+    #         session.close()
 
 
 def update_online_device(device_sn):

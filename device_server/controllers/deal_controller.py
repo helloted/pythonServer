@@ -21,171 +21,124 @@ from reco.main.reco_main import RecoMain
 from redis_manager import r_upload_token
 import hashlib,os
 import traceback,time,imp
-from reco.main.reco_main_temp import RecoMain as TempRecoMain
-import StringIO, gzip
+import StringIO, gzip,zlib
+from gevent import monkey; monkey.patch_all()
+import gevent
+from super_models.deal_status_model import DealStatus
+from celery import Celery
 
+broker_url = 'redis://localhost:6379/10'
+backend_url = 'redis://localhost:6379/11'
 
-def verify_sn(deal_sn,time,device_sn,seed_token):
-    timestr = str(time)
-
-    text = device_sn + seed_token + timestr
-    base = aes_enc_b64(text)
-    hah = hashlib.sha1(base).hexdigest()
-
-    logger.info('text'+text)
-    logger.info('hash'+hah)
-    logger.info(deal_sn)
-
-    verify = hah[:6]
-
-    post_verify = deal_sn[-6:]
-
-    if post_verify == verify:
-        return True
-    else:
-        logger.error('post_verify:{post},myverify:{my}'.format(post=post_verify,my=verify))
-        return False
-
+client = Celery('convert_deal', backend=backend_url, broker=broker_url)
 
 def upload_deal(data,tcp_socket):
-    seq = data.get('seq')
-    content = data.get('content')
-
-    deal_sn = content.get('deal_sn')
-    deal_time = content.get('deal_time')
-    device_sn = content.get('device_sn')
-
-    seedtoken = 'seed'
-
-    verify = verify_sn(deal_sn,deal_time,device_sn,seedtoken)
-
-    #交易序列号未通过验证
-    if verify == False:
-        send = fail_response(data,errors.ERROR_Deal_SN_NotVerify)
-        tcp_socket.send(send)
-    else:
-        total_price = content.get('total_price')
-        itmes_list = content.get('list')
-        deal = Deal()
-        deal.sn = deal_sn
-        deal.time = deal_time
-
-        deal.datetime = datetime.fromtimestamp(int(deal_time/1000))
-
-        deal.device_sn= tcp_socket.device_sn
-        deal.store_id = tcp_socket.store_id
-        deal.total_price = int(total_price)
-        deal.items_list = json.dumps(itmes_list)
-
-        session = Session()
-        session.add(deal)
-
-
-        try:
-            session.commit()
-        except Exception, e:
-            session.rollback()
-            send = fail_response(data,errors.ERROR_DataBase)
-            logger.error(e.message)
-        else:
-            send = success_response(data)
-            # 发送广播
-            live = {}
-            live['store_id'] = tcp_socket.store_id
-            live['device_sn'] = tcp_socket.device_sn
-            live['deal_sn'] = deal_sn
-            live['time'] = deal_time
-            live['total_price'] = total_price
-            live['tax'] = total_price * 0.1
-
-            channel = 'live_deal' + str(tcp_socket.store_id)
-
-            redis_center.publish(channel, live)
-
-        finally:
-            session.close()
-            tcp_socket.send(send)
-            logger.info(send)
-
-
-def save_order(order,device_sn,store_id):
-    is_valid_order = order.get('is_valid_order')
-    if not is_valid_order:
-        return
-    total_price = order.get('total')
-    if not total_price:
-        total_price=0
-    itmes_list = order.get('items')
-    if not itmes_list:
-        itmes_list = []
-    deal = Deal()
-    deal.sn = order.get('sn')
-    deal.time = order.get('time')
-    deal.tax = order.get('tax')
-    deal.orgin = order.get('txt_data')
-
-    orgin_id = order.get('order_id')
-
-    session = Session()
-
-    if not orgin_id:
-        return
-    else:
-        try:
-            old_deal = session.query(Deal).filter_by(orgin_id=orgin_id).first()
-        except Exception,e:
-            logger.info(e)
-        else:
-            if old_deal:
-                logger.info('same_order_id:{orgin_id}'.format(orgin_id = orgin_id))
-                return
-        finally:
-            session.close()
-
-
-
-    if not deal.time:
-        deal.time = 0
-    deal.datetime = datetime.fromtimestamp(int(int(deal.time) / 1000))
-
-    deal.store_id = store_id
-    store_name = r_store_info.get(str(store_id))
-    if not store_name:
-        store = session.query(Store).filter_by(store_id=store_id).first()
-        if store:
-            store_name = store.name
-        else:
-            store_name = ''
-
-        r_store_info.set(str(store_id),store_name)
-
-    deal.device_sn = device_sn
-    deal.total_price = int(total_price)
-    deal.items_list = json.dumps(itmes_list)
-    deal.orgin_id = orgin_id
-
-    session.add(deal)
-
     try:
-        session.commit()
-    except Exception, e:
-        session.rollback()
-        logger.error(e.message)
+        content = data.get('content')
+        deal_sn = content.get('deal_sn')
+        device_sn = tcp_socket.device_sn
+    except Exception,e:
+        logger.error(e)
+        send = fail_response(tcp_socket.device_sn, data, errors.ERROR_Deal_Received_Failed)
     else:
-        # 发送广播
-        live = {}
-        live['store_id'] = store_id
-        live['device_sn'] = device_sn
-        live['deal_sn'] = deal.sn
-        live['time'] = deal.time
-        live['total_price'] = total_price
-        live['tax'] = deal.tax
+        if not deal_sn:
+            logger.error('deal_sn is null')
+            send = fail_response(tcp_socket.device_sn, data, errors.ERROR_Deal_Received_Failed)
 
-        channel = 'live_deal' + str(store_id)
 
-        redis_center.publish(channel, live)
+        save_event = gevent.spawn(save_origin_deal_to_folder,device_sn,deal_sn,content)
+        create_event = gevent.spawn(create_deal_record,device_sn,deal_sn)
+        gevent.joinall([save_event,create_event])
+
+        if save_event.value and create_event.value == 1:
+            send = success_response(device_sn,data)
+            try:
+                # 将订单送入消息通道
+                send_deal_to_celery(device_sn, deal_sn, content)
+            except Exception,e:
+                logger.error(e)
+            else:
+                logger.info('{deal_sn} deal received, saved, sent to convert success'.format(deal_sn=deal_sn))
+        elif create_event.value == 2:
+            logger.info('{deal_sn} repeated received, ignore this deal'.format(deal_sn=deal_sn))
+            send = success_response(device_sn, data)
+        else:
+            send = fail_response(device_sn, data, errors.ERROR_Deal_Received_Failed)
+            logger.info('received deal {deal_sn} failed, save {save}, create {create}'.format(deal_sn=deal_sn,save=save_event.value,create=create_event.value))
+
+    # 回复客户端上传订单情况
+    try:
+        tcp_socket.send(send.data)
+    except Exception, e:
+        logger.error(e)
+    else:
+        logger.info(send.log)
+
+
+def save_origin_deal_to_folder(device_sn,deal_sn, contents):
+    contents = json.dumps(contents)
+    super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
+    full_time_str = datetime.now().strftime('%H_%M_%S')
+
+    date_str = datetime.now().strftime('%Y%m%d')
+
+    # /files/original/6201001000100/20171023/
+    folder_path = super_path + '/files/original/'+ device_sn + '/' + date_str
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    #  62010010001003r3fe3d.txt
+    file_path = folder_path + '/' + deal_sn +'.txt'
+    try:
+        fh = open(file_path, 'w')
+        fh.write(contents)
+        fh.close()
+    except Exception,e:
+        logger.error(e)
+        return False
+    else:
+        logger.info('orginal file saved:' + file_path)
+        return True
+
+
+def create_deal_record(device_sn, deal_sn):
+    session = Session()
+    try:
+        deal = session.query(DealStatus).filter(DealStatus.deal_sn==deal_sn).first()
+    except Exception,e:
+        logger.error(e)
+    else:
+        if deal:
+            return 2  # 重复上传同一个deal_sn，不需要再次解析
+        else:
+            now_msec = int(round(time.time() * 1000))
+            deal_status = DealStatus()
+            deal_status.deal_sn = deal_sn
+            deal_status.device_sn = device_sn
+            deal_status.receive_time = now_msec
+            deal_status.status = 0  # 已接收,但未解析
+
+            try:
+                session.add(deal_status)
+                session.commit()
+            except Exception, e:
+                logger.error(e)
+                return 0 # 建档失败，需要重新上传
+            else:
+                return 1 # 建档成功
     finally:
         session.close()
+
+
+
+def send_deal_to_celery(device_sn,deal_sn,content):
+    msg_data = {}
+    msg_data['device_sn'] = device_sn
+    msg_data['deal_sn'] = deal_sn
+    msg_data['content'] = content
+    msg_json = json.dumps(msg_data)
+    client.send_task('convert_center.receive', (msg_json,))
+
 
 def save_to_file(file_name, contents):
     contents = str(contents)
@@ -219,7 +172,7 @@ def upload_capture(data,tcp_socket):
     #
     # if not token or not store_token == token:
     #     logger.info(('upload_token:',token,store_token))
-    #     send = fail_response(data, errors.ERROR_Upload_Token_Incorrect)
+    #     send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Upload_Token_Incorrect)
     #     tcp_socket.send(send)
     #     return
 
@@ -229,8 +182,13 @@ def upload_capture(data,tcp_socket):
     except Exception,e:
         logger.error(e)
         save_to_file(tcp_socket.device_sn,content_str)
-        send = fail_response_with_str(data,e.message)
-        tcp_socket.send(send)
+        send = fail_response(tcp_socket.device_sn,data,errors.ERROR_Deal_Para_Error)
+        try:
+            tcp_socket.send(send.data)
+        except Exception, e:
+            logger.error(e)
+        else:
+            logger.info(send.log)
     else:
         resp_list = []
         try:
@@ -238,8 +196,13 @@ def upload_capture(data,tcp_socket):
             order_list = result_dict.get('order_list')
             if not success:
                 save_to_file(tcp_socket.device_sn, content_str)
-                send = fail_response_with_str(data, 'para failed')
-                tcp_socket.send(send)
+                send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Deal_Para_Error)
+                try:
+                    tcp_socket.send(send.data)
+                except Exception, e:
+                    logger.error(e)
+                else:
+                    logger.info(send.log)
                 return
             for result in order_list:
                 order = result.get('order')
@@ -250,68 +213,24 @@ def upload_capture(data,tcp_socket):
         except Exception,e:
             logger.error(e)
             save_to_file(tcp_socket.device_sn, content_str)
-            send = fail_response_with_str(data,e.message)
-            tcp_socket.send(send)
+            send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Deal_Para_Error)
+            try:
+                tcp_socket.send(send.data)
+            except Exception, e:
+                logger.error(e)
+            else:
+                logger.info(send.log)
         else:
             orgin_data = {}
             orgin_data['orders'] = order_list
-            send = response(data,orgin_data)
-            tcp_socket.send(send)
+            send = response(tcp_socket.device_sn,data,orgin_data)
+            try:
+                tcp_socket.send(send.data)
+            except Exception, e:
+                logger.error(e)
+            else:
+                logger.info(send.log)
 
-
-def upload_orderhex(data,tcp_socket):
-    # version = data.get('version')
-    # if int(version) == 2:
-    #     compress = data.get('content')
-    #     content = gzdecode(compress)
-    #     print compress
-    #     print content
-    # else:
-    #     print version
-    #
-    # return
-
-    content = data.get('content')
-    try:
-        _reco_main = TempRecoMain(content)
-        result_dict = _reco_main.parse()
-    except Exception,e:
-        logger.error(e)
-        save_to_file(tcp_socket.device_sn,content)
-        logger.info(type(e.message))
-        send = fail_response_with_str(data,'parse error')
-        tcp_socket.send(send)
-    else:
-        if not result_dict:
-            send = fail_response_with_str(data, 'no parse result')
-            tcp_socket.send(send)
-            return
-
-        resp_list = []
-        try:
-            success = result_dict.get('status')
-            order_list = result_dict.get('order_list')
-            if not success:
-                logger.info('convert result status not success')
-                save_to_file(tcp_socket.device_sn, content)
-                send = fail_response_with_str(data, 'Result status is False')
-                tcp_socket.send(send)
-                return
-            for result in order_list:
-                order = result.get('order')
-                if order:
-                    save_order(order,tcp_socket.device_sn,tcp_socket.store_id)
-                result.pop('order')
-                resp_list.append(result)
-        except Exception,e:
-            logger.error(e)
-            logger.info('save order error')
-            save_to_file(tcp_socket.device_sn, content)
-            send = fail_response_with_str(data, e.message)
-            tcp_socket.send(send)
-        else:
-            respon = success_response(data)
-            tcp_socket.send(respon)
 
 def gzdecode(data) :
     compressedstream = StringIO.StringIO(data)
@@ -319,61 +238,237 @@ def gzdecode(data) :
     result = gziper.read()   # 读取解压缩后数据
     return result
 
-def pass_to_conversion(tcp_socket,data):
-    compress = data.get('content')
-    content = gzdecode(compress)
+
+def save_origin_deal_to_folder(device_sn,deal_sn, contents):
+    contents = str(contents)
+    super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
+    full_time_str = datetime.now().strftime('%H_%M_%S')
+
+    date_str = datetime.now().strftime('%Y%m%d')
+
+    # /files/original/6201001000100/20171023/
+    folder_path = super_path + '/files/original/'+ device_sn + '/' + date_str
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    #  62010010001003r3fefe_15_28_35
+    file_path = folder_path + '/' + deal_sn  +'_'+ full_time_str +'.txt'
+    try:
+        fh = open(file_path, 'w')
+        fh.write(contents)
+        fh.close()
+    except Exception,e:
+        logger.error(e)
+        return False
+    else:
+        logger.info('orginal file saved:' + file_path)
+        return True
 
 
+def upload_orderhex(data,tcp_socket):
+    version = data.get('version')
+    version = int(version)
+    if version == 1:
+        logger.error('the version is 1')
+    else:
+        pass_to_conversion(data,tcp_socket)
+
+
+def save_all_deal_to_folder(device_sn, contents):
+    contents = str(contents)
+    super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
+
+
+    full_time_str = datetime.now().strftime('%H_%M_%S_%f')
+
+    date_str = datetime.now().strftime('%Y%m%d')
+
+    folder_path = super_path + '/files/original/'+ device_sn + '/' + date_str
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    file_path = folder_path + '/' + device_sn  +'_'+ full_time_str +'.txt'
+    logger.info('orginal file saved:'+file_path)
+    fh = open(file_path, 'w')
+    fh.write(contents)
+    fh.close()
+
+def pass_to_conversion(data,tcp_socket):
+    content = data.get('content')
+    save_all_deal_to_folder(tcp_socket.device_sn,content)
     superPath = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,os.pardir))
     folderPath = superPath + '/conversion_scripts/'
-    script_name = '{device_sn}.py'.format(device_sn=tcp_socket.device_sn)
+    script_name = 's_{device_sn}.py'.format(device_sn=tcp_socket.device_sn)
     scriptPath = folderPath + script_name
 
     # 判断是否存在脚本
     try:
-        py_module = imp.load_source('module.name', scriptPath)
+        py_module = imp.load_source('s_{device_sn}'.format(device_sn=tcp_socket.device_sn), scriptPath)
     except Exception,e:
-        logger.error('no such convert script')
+        logger.error(e)
+        logger.error('{device} load script error'.format(device=tcp_socket.device_sn))
+        send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Deal_Para_Error)
+        save_to_file(tcp_socket.device_sn, content)
+        try:
+            tcp_socket.send(send.data)
+        except Exception, e:
+            logger.error(e)
+        else:
+            logger.info(send.log)
     else:
         try:
             result_dict = py_module.format_convert(content)
         except Exception,e:
-            logger.info(e)
-            logger.error('format_convert failed')
-        else:
-            if not result_dict:
-                send = fail_response_with_str(data, 'no parse result')
-                tcp_socket.send(send)
-                return
-
-            resp_list = []
+            logger.error(traceback.format_exc())
+            logger.info('format_convert failed')
+            send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Deal_Para_Error)
+            save_to_file(tcp_socket.device_sn, content)
             try:
-                success = result_dict.get('status')
-                order_list = result_dict.get('order_list')
-                if not success:
-                    logger.info('convert result status not success')
-                    save_to_file(tcp_socket.device_sn, content)
-                    send = fail_response_with_str(data, 'Result status is False')
-                    tcp_socket.send(send)
-                    return
-                for result in order_list:
-                    order = result.get('order')
-                    if order:
-                        save_order(order, tcp_socket.device_sn, tcp_socket.store_id)
-                    result.pop('order')
-                    resp_list.append(result)
+                tcp_socket.send(send.data)
             except Exception, e:
                 logger.error(e)
-                logger.info('save order error')
-                save_to_file(tcp_socket.device_sn, content)
-                send = fail_response_with_str(data, e.message)
-                tcp_socket.send(send)
             else:
-                respon = success_response(data)
-                tcp_socket.send(respon)
+                logger.info(send.log)
+        else:
+            if not result_dict:
+                logger.error('not success para')
+                send = fail_response(tcp_socket.device_sn,data,errors.ERROR_Deal_Para_Error)
+                try:
+                    tcp_socket.send(send.data)
+                except Exception, e:
+                    logger.error(e)
+                else:
+                    logger.info(send.log)
+                return
+
+            logger.info(result_dict)
+            success = result_dict.get('status')
+            order_type = result_dict.get('orderType')
+
+            if success and order_type == 1:
+                try:
+                    save_order(result_dict, tcp_socket.device_sn, tcp_socket.store_id)
+                except Exception, e:
+                    logger.error(e)
+                    logger.info('save order error')
+                    save_to_file(tcp_socket.device_sn, content)
+                    send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Deal_Para_Error)
+                    try:
+                        tcp_socket.send(send.data)
+                    except Exception, e:
+                        logger.error(e)
+                    else:
+                        logger.info(send.log)
+                else:
+                    result_dict.pop('orgin')
+                    orgin_data = {}
+                    orgin_data['order'] = result_dict
+                    send = response(tcp_socket.device_sn,data, orgin_data)
+                    try:
+                        tcp_socket.send(send.data)
+                    except Exception, e:
+                        logger.error(e)
+                    else:
+                        logger.info(send.log)
+            else:
+                # 存到失败文件夹
+                if not success and order_type == 1:
+                    save_to_file(tcp_socket.device_sn, content)
+                elif order_type == 0:
+                    save_to_file(tcp_socket.device_sn, content)
+
+                # 回复设备端
+                send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Deal_Para_Error)
+                try:
+                    tcp_socket.send(send.data)
+                except Exception, e:
+                    logger.error(e)
+                else:
+                    logger.info(send.log)
 
 
+def save_order(order, device_sn, store_id):
+    deal = Deal()
+    deal.sn = order.get('sn')
+    deal.time = order.get('time')
+    deal.tax = order.get('tax')
+    deal.orgin = order.get('orgin')
 
+    orgin_id = order.get('order_id')
 
-# if __name__ == '__main__':
-#     pass_to_conversion('600001','hello')
+    session = Session()
+
+    if not orgin_id:
+        return
+    else:
+        try:
+            old_deal = session.query(Deal).filter_by(orgin_id=orgin_id).first()
+        except Exception, e:
+            logger.error(e)
+        else:
+            if old_deal:
+                logger.info('same_order_id:{orgin_id}'.format(orgin_id=orgin_id))
+                return
+        finally:
+            session.close()
+
+    store_session = Session()
+    if not deal.time:
+        deal.time = 0
+    deal.datetime = datetime.fromtimestamp(int(int(deal.time) / 1000))
+
+    deal.store_id = store_id
+    store_name = r_store_info.get(str(store_id))
+    if not store_name:
+        try:
+            store = store_session.query(Store).filter_by(store_id=store_id).first()
+        except Exception, e:
+            logger.error(e)
+        else:
+            if store:
+                store_name = store.name
+            else:
+                store_name = ''
+            deal.store_name = store_name
+
+            r_store_info.set(str(store_id), store_name)
+        finally:
+            store_session.close()
+
+    total_price = order.get('total_price')
+    if not total_price:
+        total_price = 0
+    itmes_list = order.get('items_list')
+    if not itmes_list:
+        itmes_list = []
+    deal.device_sn = device_sn
+    deal.total_price = int(total_price)
+    deal.items_list = json.dumps(itmes_list)
+    deal.orgin_id = orgin_id
+
+    new_session = Session()
+    new_session.add(deal)
+
+    try:
+        new_session.commit()
+    except Exception, e:
+        new_session.rollback()
+        logger.error(e.message)
+    else:
+        logger.debug('save order{sn} success'.format(sn=order.get('sn')))
+        
+        # 发送广播
+        live = {}
+        live['store_id'] = store_id
+        live['device_sn'] = device_sn
+        live['deal_sn'] = deal.sn
+        live['time'] = deal.time
+        live['total_price'] = total_price
+        live['tax'] = deal.tax
+        live['orgin_id'] = deal.orgin_id
+
+        channel = 'live_deal' + str(store_id)
+
+        redis_center.publish(channel, live)
+    finally:
+        new_session.close()
+

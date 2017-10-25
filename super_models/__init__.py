@@ -11,3 +11,6 @@ import deal_model
 import id_model
 import daily_model
 import history_model
+import device_key_model
+import deal_status_model
+import order_model

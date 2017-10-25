@@ -11,7 +11,7 @@ import tornado.gen
 import tornadoredis
 from tornado.escape import json_encode
 from log_util.web_demo_logger import logger
-from redis_manager import redis_center
+from redis_manager import redis_center,redis_web_device
 from super_models.database import Session
 from super_models.deal_model import Deal
 
@@ -192,7 +192,9 @@ class PrintHandler(tornado.web.RequestHandler):
 
         self.subscribe(channel)
 
-        redis_center.publish('cmd_print', body)
+        redis_web_device.publish('cmd_print', body)
+
+        # redis_center.publish('cmd_print', body)
 
         num = 60  # 设置超时时间为60s
         tornado.ioloop.IOLoop.instance().add_timeout(

@@ -7,7 +7,7 @@ from log_util.device_logger import logger
 from redis_manager import redis_center
 # from device_server.controllers.push_device_controller import send_printer
 
-url = 'http://47.74.130.48:8008/'
+url = 'http://www.swindtech.com:8008/'
 
 user_id =2
 token = '7bc6c144c258dfb5d4c2775d41980f4ebf1906c2'

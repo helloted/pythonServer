@@ -12,8 +12,8 @@ from super_models.device_model import Device
 from web_server.models import SessionContext
 from web_server.response.resp import add_headers,success_response,failed_response
 import time,json
-from redis_manager import r_store_info
-from super_models.store_model import Store
+from redis_manager import r_queue
+from log_util.web_demo_logger import logger
 
 
 node_device=Blueprint('device_layer',__name__,)
@@ -41,10 +41,34 @@ def qr_setting():
     return session.result
 
 
-@node_device.route('/qr_setting', methods=['POST'])
+@node_device.route('/upload_log', methods=['POST'])
 @add_headers
-def qr_setting():
-    page = request.args.get('page')
+def upload_log():
+    body = request.form
+    if not body:
+        body = request.data
 
-    return page
+    if body and isinstance(body,str):
+        body = eval(body)
+
+    body = body.to_dict()
+
+    logger.info(body)
+
+    device_sn = body.get('device_sn')
+    time = body.get('time')
+
+    if time == 'NaN':
+        return failed_response(101,'para missing')
+
+    if device_sn and time:
+        data = {}
+        data['device_sn'] = device_sn
+        data['type'] = 'upload_log'
+        data['time'] = time
+        r_queue.lpush('devices_queue', data)
+        return success_response()
+    else:
+        return failed_response(101,'para missing')
+
 

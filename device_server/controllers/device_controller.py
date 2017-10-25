@@ -21,52 +21,136 @@ import time,os
 from device_server.db_tool import SessionContext
 from super_models.history_model import EventsHistroy
 from super_models.store_model import Store
+from super_models.device_key_model import DeviceKey
+import random,string,hashlib,traceback
+
+def pre_connect(data,tcp_socket):
+    token = ''.join(random.sample(string.ascii_letters + string.digits, 6))
+    tcp_socket.aes_key = token
+    content ={}
+    content['token'] = token
+    send = succss_response_content(tcp_socket.device_sn,data,content)
+    try:
+        tcp_socket.send(send.data)
+    except Exception, e:
+        logger.error(e)
+    else:
+        logger.info(send.log)
 
 def init_connect(data,tcp_socket,sockets):
     seq = data.get('seq')
     content = data.get('content')
+
+    version = data.get('version')
+    tcp_socket.version = int(version)
+
     sign = content.get('sign')
+
+    key_session = Session()
+    if tcp_socket.version > 4:
+        device_sn = content.get('device_sn')
+        if not device_sn:
+            logger.info('this device no device_sn,can\'t sign')
+            tcp_socket.close()
+            return
+
+        try:
+            key_model = key_session.query(DeviceKey).filter_by(device_sn=device_sn).first()
+        except Exception,e:
+            logger.error(e)
+        else:
+            my_sign = ''
+            if key_model:
+                pre = key_model.key + tcp_socket.aes_key + device_sn
+                hash_pre = hashlib.md5(pre.encode('utf-8')).hexdigest()
+                second_key = hash_pre[:16]
+                tcp_socket.aes_key = second_key
+                my_sign = second_key[:10]
+                my_sign = hashlib.md5(my_sign.encode('utf-8')).hexdigest()
+            else:
+                logger.info('{device} can not find the key'.format(device=device_sn))
+
+            if my_sign != sign:
+                logger.info('{device} sign failed,the sign not correct'.format(device=device_sn))
+                send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Sign_Valid)
+                try:
+                    tcp_socket.send(send.data)
+                except Exception, e:
+                    logger.error(e)
+                else:
+                    logger.info(send.log)
+                finally:
+                    tcp_socket.close()
+                return
+            else:
+                tcp_socket.device_sn = device_sn
+                logger.info('{device} sign success'.format(device=device_sn))
+        finally:
+            key_session.close()
+    else:
+        try:
+            opensign = b64_aes_dec(sign)
+        except Exception,e:
+            logger.error(e)
+            send = fail_response(tcp_socket.device_sn,data, errors.ERROR_Sign_Valid)
+            try:
+                tcp_socket.send(send.data)
+            except Exception, e:
+                logger.error(e)
+            else:
+                logger.info(send.log)
+            return
+
+
+        logger.debug('opensign:'+opensign)
+        random_num,device_sn = opensign.split('|')
+
+        if not device_sn:
+            logger.info('init information incorrect, close the socket')
+            tcp_socket.close()
+            return
+        else:
+            tcp_socket.device_sn = device_sn
+            logger.info('{device_sn} init connect'.format(device_sn=device_sn))
+
+        if device_sn == '6201001000006':
+            logger.error('this is a test error for the device 6201001000006')
 
     local_setting_version = content.get('local_setting_version')
     app_version = content.get('app_version')
-
     wifi_list = content.get('wifi_list')
 
     if not app_version:
         app_version = ''
 
+    device_session = Session()
     try:
-        opensign = b64_aes_dec(sign)
+        device = device_session.query(Device).filter_by(sn=device_sn).first()
     except Exception,e:
-        jsonrsp = fail_response(101, 'base64'+str(e), seq)
-        return None,jsonrsp
-
-    logger.debug('opensign:'+opensign)
-
-    random_num,serial_num = opensign.split('|')
-
-    session = Session()
-
-
-    try:
-        device = session.query(Device).filter_by(sn=serial_num).first()
-    except Exception,e:
-        session.rollback()
-        logger.info(e.message)
-        send = fail_response(seq,errors.ERROR_No_Such_Device)
-        tcp_socket.send(send)
+        logger.error(e.message)
+        send = fail_response(tcp_socket.device_sn, data, errors.ERROR_No_Such_Device)
+        try:
+            tcp_socket.send(send.data)
+        except Exception, e:
+            logger.error(e)
+        else:
+            logger.info(send.log)
         tcp_socket.close()
     else:
         if not device:
-            send = fail_response(seq,errors.ERROR_No_Such_Device)
-            tcp_socket.send(send)
+            send = fail_response(tcp_socket.device_sn,data,errors.ERROR_No_Such_Device)
+            try:
+                tcp_socket.send(send.data)
+            except Exception, e:
+                logger.error(e)
+            else:
+                logger.info(send.log)
             tcp_socket.close()
         else:
             tcp_socket.device_sn = device.sn
             tcp_socket.store_id = device.store_id
 
             content = {}
-
             content['newest_setting_version'] = device.newest_setting_version
             content['wifi_name'] = device.wifi_name
             content['wifi_password'] = device.wifi_password
@@ -100,9 +184,14 @@ def init_connect(data,tcp_socket,sockets):
             if device.cut_cmds:
                 content['cut_cmds'] = json.loads(device.cut_cmds)
 
+            send = succss_response_content(tcp_socket.device_sn,data,content)
 
-            send = succss_response_content(data,content)
-            tcp_socket.send(send)
+            try:
+                tcp_socket.send(send.data)
+            except Exception,e:
+                logger.error(e)
+            else:
+                logger.info(send.log)
 
             sockets_controller.set_socket(device.sn,tcp_socket)
 
@@ -123,9 +212,14 @@ def init_connect(data,tcp_socket,sockets):
                 device.local_setting_version = local_setting_version
             if wifi_list:
                 device.wifi_list = json.dumps(wifi_list)
-            session.commit()
+
+            # 将device存到数据库
+            try:
+                device_session.commit()
+            except Exception,e:
+                logger.error(e)
     finally:
-        session.close()
+        device_session.close()
 
 
 def heart_beat(data,tcp_socket):
@@ -138,9 +232,13 @@ def heart_beat(data,tcp_socket):
 
         with SessionContext() as session:
             device = session.query(Device).filter_by(sn=tcp_socket.device_sn).first()
+            if not device:
+                logger.info('no device,close the tcp socket')
+                tcp_socket.close()
+                return
             device.port_connecting = port_connecting
             if not port_connecting:
-                history =  EventsHistroy()
+                history = EventsHistroy()
                 history.device_sn = tcp_socket.device_sn
                 history.time = int(time.time())
                 history.start_time = int(time.time())
@@ -152,17 +250,16 @@ def heart_beat(data,tcp_socket):
                     history.store_name = store.name
 
                 session.add(history)
-
             session.commit()
-    send = success_response(data)
+    send = success_response(tcp_socket.device_sn,data)
     device_sn = tcp_socket.device_sn
     device_redis.update_online_device(device_sn)
     try:
-        tcp_socket.send(send)
-    except Exception,e:
-        logger.error(e.message)
+        tcp_socket.send(send.data)
+    except Exception, e:
+        logger.error(e)
     else:
-        logger.info(send)
+        logger.info(send.log)
 
 
 def request_app(data,tcp_socket):
@@ -178,16 +275,24 @@ def request_app(data,tcp_socket):
             temp = file
     content = {}
     content['url'] = 'http://47.74.130.48:8005/files/app/' + temp
-    send = succss_response_content(data,content)
-    tcp_socket.send(send)
-    logger.info(send)
+    send = succss_response_content(tcp_socket.device_sn,data,content)
+    try:
+        tcp_socket.send(send.data)
+    except Exception, e:
+        logger.error(e)
+    else:
+        logger.info(send.log)
 
 
 
 def position_report(data,tcp_socket):
-    send = success_response(data)
-    tcp_socket.send(send)
-    logger.info(send)
+    send = success_response(tcp_socket.device_sn,data)
+    try:
+        tcp_socket.send(send.data)
+    except Exception, e:
+        logger.error(e)
+    else:
+        logger.info(send.log)
 
 
 def pushToken():
@@ -206,6 +311,7 @@ def pushToken():
         session.commit()
         print 'success login'
     except Exception, e:
+        logger.error(e)
         session.rollback()
         print 'Exception:',e.message
 
