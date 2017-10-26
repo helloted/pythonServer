@@ -147,9 +147,6 @@ def save_deal_to_DB(device_sn,deal_sn,convert_result):
     if not store_name:
         store_name = 'NoStore'
 
-    if not origin_id_ok:
-        logger.info('deal_id: {deal_id} repeated,can not save to DB'.format(deal_id=origin_id))
-
     deal = Deal()
     total_price = convert_result.get('total_price')
     if not total_price:
@@ -242,7 +239,7 @@ def db_get_deal_store_info(device_sn):
 def save_order_to_DB(device_sn,deal_sn,convert_result):
     order_sn = deal_sn
     original_id = convert_result.get('order_id')
-    origin_id_ok = db_check_originID_is_ok(order_sn,original_id)
+    origin_id_ok = check_order_id_is_OK(order_sn,original_id)
     if not origin_id_ok:
         return
 
@@ -310,7 +307,7 @@ def check_order_id_is_OK(order_sn,original_id):
             return False
         else:
             if old_order:
-                logger.info('{deal_sn} convert_result has repeat order id {original_id}'.format(deal_sn=order_sn,original_id=original_id))
+                logger.info('{deal_sn} convert_result has repeat order id {original_id},ignore this order'.format(deal_sn=order_sn,original_id=original_id))
                 return False
             else:
                 return True

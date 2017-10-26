@@ -37,13 +37,22 @@ def check_deals():
     time_24 = int(yestday_24_msec/1000) - 1
     str_24 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_24))
 
-    msg = '从 {start} 至 {end}, 一共接收小票{received}单，其中未解析{did_not}单，解析失败{failed}单，解析成功{success}单，里面有订单共{order}单'\
+    msg = '从 {start} 至 {end},\n\n' \
+          '<签收统计>如下:\n' \
+          '签收小票{received}单，\n'\
+          '未送解析{did_not}单，\n \n' \
+          '<解析统计>如下:\n' \
+          '解析失败{failed}单，\n'\
+          '解析成功{success}单，\n'\
+          '其中订单{order}单。'\
         .format(start=str_0,end=str_24,received= received_count,did_not=did_not,failed= convert_failed,success=convert_success,order=order)
 
+    # print msg
+
     to_list = ['caohaozhi@swindtech.com','xiaojing@swindtech.com','wuliangwang@swindtech.com']
+    # to_list = ['caohaozhi@swindtech.com',]
     subject = 'Convert_Server 解析统计'
     celery_send_mail(to_list,subject,msg)
-
 
 
 def zero_point_time_msec():

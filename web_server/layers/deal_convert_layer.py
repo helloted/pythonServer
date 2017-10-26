@@ -94,6 +94,7 @@ def deal_event():
                 if deal_status:
                     deal_status.status = 3
                     deal_status.remark = 'Deleted from WEB'
+                    session.commit()
             finally:
                 session.close()
 

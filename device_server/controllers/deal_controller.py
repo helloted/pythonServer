@@ -33,10 +33,11 @@ backend_url = 'redis://localhost:6379/11'
 client = Celery('convert_deal', backend=backend_url, broker=broker_url)
 
 def upload_deal(data,tcp_socket):
+    device_sn = tcp_socket.device_sn
     try:
         content = data.get('content')
         deal_sn = content.get('deal_sn')
-        device_sn = tcp_socket.device_sn
+        content_json = json.dumps(content)
     except Exception,e:
         logger.error(e)
         send = fail_response(tcp_socket.device_sn, data, errors.ERROR_Deal_Received_Failed)
@@ -46,7 +47,7 @@ def upload_deal(data,tcp_socket):
             send = fail_response(tcp_socket.device_sn, data, errors.ERROR_Deal_Received_Failed)
 
 
-        save_event = gevent.spawn(save_origin_deal_to_folder,device_sn,deal_sn,content)
+        save_event = gevent.spawn(save_origin_deal_to_folder,device_sn,deal_sn,content_json)
         create_event = gevent.spawn(create_deal_record,device_sn,deal_sn)
         gevent.joinall([save_event,create_event])
 
@@ -54,7 +55,7 @@ def upload_deal(data,tcp_socket):
             send = success_response(device_sn,data)
             try:
                 # 将订单送入消息通道
-                send_deal_to_celery(device_sn, deal_sn, content)
+                send_deal_to_celery(device_sn, deal_sn, content_json)
             except Exception,e:
                 logger.error(e)
             else:
@@ -75,8 +76,7 @@ def upload_deal(data,tcp_socket):
         logger.info(send.log)
 
 
-def save_origin_deal_to_folder(device_sn,deal_sn, contents):
-    contents = json.dumps(contents)
+def save_origin_deal_to_folder(device_sn,deal_sn, content_json):
     super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
     full_time_str = datetime.now().strftime('%H_%M_%S')
 
@@ -89,9 +89,10 @@ def save_origin_deal_to_folder(device_sn,deal_sn, contents):
 
     #  62010010001003r3fe3d.txt
     file_path = folder_path + '/' + deal_sn +'.txt'
+
     try:
         fh = open(file_path, 'w')
-        fh.write(contents)
+        fh.write(content_json)
         fh.close()
     except Exception,e:
         logger.error(e)

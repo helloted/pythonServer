@@ -13,20 +13,20 @@ def query():
 
 
 def order_at():
-    # session = Session()
-    # all = session.query(Order).all()
-    # for order in all:
-    #     print order.device_sn
-    order = Order()
-    order.device_sn = 'test_sn'
     session = Session()
-    try:
-        session.add(order)
-        session.commit()
-    except Exception,e:
-        print e
-    else:
-        print 'finish'
+    all = session.query(Order).all()
+    for order in all:
+        print order.device_sn
+    # order = Order()
+    # order.device_sn = 'test_sn'
+    # session = Session()
+    # try:
+    #     session.add(order)
+    #     session.commit()
+    # except Exception,e:
+    #     print e
+    # else:
+    #     print 'finish'
 
 if __name__ == '__main__':
     order_at()
