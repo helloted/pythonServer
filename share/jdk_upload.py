@@ -106,7 +106,11 @@ def upload_log():
         file = request.files['file']
         if file:
             filename = secure_filename(file.filename)
-            flod_path = super_path + '/files/log'
+            device_sn = filename[:13]
+            flod_path = super_path + '/files/log/{device_sn}'.format(device_sn=device_sn)
+
+            # 6201001000100_2017_10_24.log
+
             if not os.path.exists(flod_path):
                 os.makedirs(flod_path)
             try:

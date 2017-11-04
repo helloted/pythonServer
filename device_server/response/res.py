@@ -18,7 +18,6 @@ def head_pack(data):
     return send
 
 
-
 def response(device_sn,orgin_data,content):
     content['code'] = 0
     content['msg'] = 'success'
@@ -29,7 +28,6 @@ def response(device_sn,orgin_data,content):
 
     log = SERVER + ' -> ' + device_sn + ', ' + jsonrsp
     send = Send(send_data,log)
-
 
     return send
 

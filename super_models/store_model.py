@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String,BigInteger, DECIMAL, Float,JSON
 from super_models.database import Base
-from sqlalchemy.orm import relationship
 
 
 class Store(Base):
@@ -11,9 +10,6 @@ class Store(Base):
     store_id = Column(BigInteger, nullable=False,unique=True)
 
     store_sn = Column(String(64))
-
-    devices = relationship("Device", backref="store")
-    deals = relationship("Deal", backref="store")
 
     region_code = Column(Integer)
     region = Column(String(64))

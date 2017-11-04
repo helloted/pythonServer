@@ -14,3 +14,4 @@ import history_model
 import device_key_model
 import deal_status_model
 import order_model
+import device_store_model

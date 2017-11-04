@@ -15,7 +15,7 @@ port = 8050
 
 ADDR = (host, port)
 
-device_sn = "6201001000007"
+device_sn = "6201001000000"
 
 client = socket.socket()
 buffer = bytes()

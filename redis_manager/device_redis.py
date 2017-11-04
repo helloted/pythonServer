@@ -73,14 +73,3 @@ def check_online(device_sn):
         return True
     else:
         return False
-
-
-if __name__ == '__main__':
-    device_sn = '6201001000002'
-    session = Session()
-    try:
-        store = session.query(Store).filter(Device.sn== device_sn,Store.store_id ==Device.store_id).first()
-    except Exception,e:
-        print e
-    else:
-        print store.name

@@ -1,7 +1,6 @@
 #coding=utf-8
 
 from sqlalchemy import Column, Integer, String,BigInteger, ForeignKey,JSON,Boolean
-from sqlalchemy.orm import relationship, backref
 from super_models.database import Base
 
 
@@ -12,13 +11,6 @@ class Device(Base):
     sn = Column(String(32),unique=True,index=True)
     phone = Column(String(16))
     install_time = Column(BigInteger)
-
-
-    store_id = Column(BigInteger, ForeignKey('store.store_id'))
-
-    deals = relationship("Deal",backref="device")
-
-    seedtokens = relationship("SeedToken",backref="device")
 
     problem = Column(Boolean,default=False)
 
@@ -71,6 +63,9 @@ class Device(Base):
 
     # 是否添加二维码
     add_qr = Column(Boolean)
+
+    # 二维码提示
+    qr_remark = Column(String(128))
 
     # 订单有效关键字
     order_valid_keys = Column(JSON)

@@ -250,7 +250,7 @@ class HistoryDistrictHandler(tornado.web.RequestHandler):
 
 class DealDetailHandler(tornado.web.RequestHandler):
     def get(self):
-        deal_sn =  self.get_argument('deal_sn')
+        deal_sn = self.get_argument('deal_sn')
 
         session = Session()
         resdic = {}
@@ -267,7 +267,9 @@ class DealDetailHandler(tornado.web.RequestHandler):
         else:
             data= {}
             data['deal_id'] = deal.id
-            orgin_id = store.name + '_'
+            orgin_id = ''
+            if store:
+                orgin_id = store.name + '_'
             if deal.orgin_id:
                 orgin_id = orgin_id + deal.orgin_id
             else:

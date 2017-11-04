@@ -21,38 +21,57 @@ def check_deals():
     yestday_0_msec = yestday_24_msec - 60 * 60 * 24 * 1000
     today_24_msec = yestday_24_msec + 60 * 60 * 24 * 1000
 
-    received_count = session.query(DealStatus).filter(DealStatus.receive_time.between(yestday_0_msec,yestday_24_msec)).count()
-    convert_success = session.query(DealStatus).filter(
-        DealStatus.receive_time.between(yestday_0_msec,yestday_24_msec),DealStatus.status==1).count()
-    convert_failed = session.query(DealStatus).filter(
-        DealStatus.receive_time.between(yestday_0_msec,yestday_24_msec),DealStatus.status==2).count()
-    did_not = received_count - convert_success - convert_failed
-    order = session.query(DealStatus).filter(
-        DealStatus.receive_time.between(yestday_0_msec,yestday_24_msec),DealStatus.deal_type==1).count()
-
-
     time_0 = int(yestday_0_msec/1000)
     str_0 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_0))
 
     time_24 = int(yestday_24_msec/1000) - 1
     str_24 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_24))
 
-    msg = '从 {start} 至 {end},\n\n' \
-          '<签收统计>如下:\n' \
-          '签收小票{received}单，\n'\
-          '未送解析{did_not}单，\n \n' \
-          '<解析统计>如下:\n' \
+    received_count = session.query(DealStatus).filter(DealStatus.receive_time.between(yestday_0_msec,yestday_24_msec)).count()
+    did_not_list = session.query(DealStatus).filter(
+        DealStatus.receive_time.between(yestday_0_msec,yestday_24_msec),DealStatus.status==0).all()
+
+    list_len = len(did_not_list)
+
+    if list_len:
+        list_str = ''
+        for deal_status in did_not_list:
+            if deal_status.deal_sn:
+                list_str = list_str + deal_status.deal_sn + '\n'
+        post_msg = '从 {start} 至 {end},<签收统计>如下:\n' \
+              '签收小票{received}单，\n'\
+              '未送解析{did_not}单.\n' \
+              '未送解析列表:\n{not_list}' \
+            .format(start=str_0,end=str_24,received= received_count,did_not=list_len,not_list=list_str)
+    else:
+        post_msg = '从 {start} 至 {end},<签收统计>如下:\n' \
+              '签收小票{received}单，\n'\
+              '未送解析0单.\n' \
+            .format(start=str_0,end=str_24,received= received_count)
+
+    to_list = ['caohaozhi@swindtech.com',]
+    subject = 'Device_Server 接收订单统计'
+    celery_send_mail(to_list,subject,post_msg)
+
+    convert_success = session.query(DealStatus).filter(
+        DealStatus.handle_time.between(yestday_0_msec,yestday_24_msec),DealStatus.status==1).count()
+    convert_failed = session.query(DealStatus).filter(
+        DealStatus.handle_time.between(yestday_0_msec,yestday_24_msec),DealStatus.status==2).count()
+    convert_total = convert_success + convert_failed
+
+    order = session.query(DealStatus).filter(
+        DealStatus.handle_time.between(yestday_0_msec,yestday_24_msec),DealStatus.deal_type==1).count()
+
+    convert_msg = '从 {start} 至 {end},<解析统计>如下:\n' \
+          '解析总数{total}单，\n' \
           '解析失败{failed}单，\n'\
           '解析成功{success}单，\n'\
           '其中订单{order}单。'\
-        .format(start=str_0,end=str_24,received= received_count,did_not=did_not,failed= convert_failed,success=convert_success,order=order)
-
-    # print msg
+        .format(start=str_0,end=str_24,total= convert_total,failed= convert_failed,success=convert_success,order=order)
 
     to_list = ['caohaozhi@swindtech.com','xiaojing@swindtech.com','wuliangwang@swindtech.com']
-    # to_list = ['caohaozhi@swindtech.com',]
     subject = 'Convert_Server 解析统计'
-    celery_send_mail(to_list,subject,msg)
+    celery_send_mail(to_list,subject,convert_msg)
 
 
 def zero_point_time_msec():

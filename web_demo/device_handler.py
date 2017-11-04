@@ -16,6 +16,7 @@ from sqlalchemy import func
 from super_models.daily_model import Daily
 from schedule.device_online import tody_online
 from web_demo.utils.session import login_required
+from super_models.device_store_model import DeviceStore
 
 
 class DevicesFilterHandler(tornado.web.RequestHandler):
@@ -49,7 +50,7 @@ class DevicesFilterHandler(tornado.web.RequestHandler):
             query = session.query(Device)
 
             if store_name:
-                query = query.filter(Store.name==store_name,Device.store_id==Store.store_id)
+                query = query.filter(DeviceStore.name==store_name,Device.store_id==Store.store_id)
 
             if problem:
                 query = query.filter_by(problem=problem)
@@ -82,9 +83,10 @@ class DevicesFilterHandler(tornado.web.RequestHandler):
                 device = {}
                 device['device_sn'] = dev.sn
 
-                store = session.query(Store).filter_by(store_id=dev.store_id).first()
-                device['store_id'] = store.store_id
-                device['store_name'] = store.name
+                device_store = session.query(DeviceStore).filter(DeviceStore.device_sn==dev.sn).first()
+                if device_store:
+                    device['store_id'] = device_store.store_id
+                    device['store_name'] = device_store.name
 
                 device['online'] = device_redis.check_online(dev.sn)
 
@@ -123,10 +125,10 @@ class DevicesHandler(tornado.web.RequestHandler):
                 device = {}
                 device['device_sn'] = dev.sn
 
-                store = session.query(Store).filter_by(store_id=dev.store_id).first()
-                if store:
-                    device['store_id'] = store.store_id
-                    device['store_name'] = store.name
+                device_store = session.query(DeviceStore).filter(DeviceStore.device_sn==dev.sn).first()
+                if device_store:
+                    device['store_id'] = device_store.store_id
+                    device['store_name'] = device_store.store_name
                 else:
                     device['store_id'] = 0
                     device['store_name'] = 'no store'
@@ -190,10 +192,10 @@ class DeviceDetailHandler(tornado.web.RequestHandler):
                 if wifi_list:
                     data['wifi_list'] = json.loads(wifi_list)
 
-                store = session.query(Store).filter_by(store_id=device.store_id).first()
-                if store:
-                    data['store_id'] = store.store_id
-                    data['store_name'] = store.name
+                device_store = session.query(DeviceStore).filter(DeviceStore.device_sn==device.sn).first()
+                if device_store:
+                    data['store_id'] = device_store.store_id
+                    data['store_name'] = device_store.store_name
                 else:
                     data['store_id'] = 0
                     data['store_name'] = 'no store'

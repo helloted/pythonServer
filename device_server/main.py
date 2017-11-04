@@ -20,6 +20,7 @@ from device_server.response.errors import ERROR_CMD_Error
 from device_server.response.res import fail_response
 import zlib
 from device_server.utils.comment import aes_decode
+from device_server.controllers import echo_controller
 
 
 headerSize = 4
@@ -61,11 +62,9 @@ def handel_data(data,tcp_socket):
     cmd = data.get('cmd')
     if (seq_int % 2) == 0:
         # 主动推给客户端的之后的回复
-        logger.info(data)
-        if cmd == 'update_token':
-            push_controller.received_update_token(data,tcp_socket)
-        elif cmd == 'print_content':
-            push_controller.print_response(data,tcp_socket)
+        logger.info(
+            '{device} -> HF, cmd:{cmd}, data:{data}'.format(device=tcp_socket.device_sn, cmd=cmd, data=data))
+        echo_controller.echo_push_handle(data,tcp_socket)
     else:
         if cmd == 'pre_connect':
             logger.debug('<<-->> pre_connect <<-->>')
@@ -150,10 +149,7 @@ def handle_request(tcp_socket):
         tcp_socket.close()
 
 if __name__ == '__main__':
-
     gevent.spawn(push_controller.receive_push_queue)
-
-    gevent.spawn(push_controller.receive_web_redis_publish)
 
     host = 'localhost'
     port = 5050

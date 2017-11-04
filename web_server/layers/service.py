@@ -10,7 +10,7 @@ from flask import Blueprint
 from flask import request
 from super_models.device_model import Device
 from web_server.models import SessionContext
-from web_server.response.resp import add_headers,success_response,failed_response
+from web_server.utils.handles import transfer
 import time,json,datetime
 from super_models.deal_model import Deal
 
@@ -18,7 +18,7 @@ from super_models.deal_model import Deal
 node_service=Blueprint('service_layer',__name__,)
 
 @node_service.route('/dealID_scan', methods=['GET'])
-@add_headers
+@transfer
 def deal_ID():
     today = datetime.date.today()
     zero = str(today) + ' 00:00:00'

@@ -10,7 +10,9 @@ from flask import Blueprint
 from flask import request
 from super_models.history_model import EventsHistroy
 from web_server.models import SessionContext
-from web_server.response.resp import add_headers,success_response,failed_response
+from web_server.utils.handles import transfer
+from web_server.utils.response import response_success,response_failed
+from web_server.utils import errors
 import time
 from redis_manager import r_store_info
 from super_models.store_model import Store
@@ -21,8 +23,8 @@ node_event=Blueprint('event_layer',__name__,)
 
 
 @node_event.route('/', methods=['GET'])
-@add_headers
-def store_detail():
+@transfer
+def event_list():
     page = request.args.get('page')
     amount = request.args.get('amount')
 
@@ -88,33 +90,23 @@ def store_detail():
             events.append(res_dict)
 
         data['events'] = events
-        session.result = success_response(data)
-
-    return session.result
+        session.result = response_success(data)
+    logger.info(session.result.log)
+    return session.result.resp_data
 
 
 @node_event.route('/edit_status', methods=['POST'])
-@add_headers
-def edit_status():
-    body = request.form
-    if not body:
-        body = request.data
-
-    if body and isinstance(body,str):
-        body = eval(body)
-
-    body = body.to_dict()
-    logger.debug(body)
-
-    event_id = body.get('id')
-    status = body.get('status')
+@transfer
+def edit_status(post_body):
+    event_id = post_body.get('id')
+    status = post_body.get('status')
     with SessionContext() as session:
         event = session.query(EventsHistroy).filter_by(id=event_id).first()
         if event:
             event.status = status
             session.commit()
-            session.result = success_response()
+            session.result = response_success()
         else:
-            session.result = failed_response(2,'no such event')
-
-    return session.result
+            session.result = response_failed(errors.ERROR_No_Such_Event)
+    logger.info(session.result.log)
+    return session.result.resp_data

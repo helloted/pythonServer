@@ -8,7 +8,7 @@ import time
 date = time.strftime("%Y%m%d")
 
 # 获取logger实例，如果参数为空则返回root logger
-logger = logging.getLogger()
+logger = logging.getLogger('WEB_Server')
 
 # 指定logger输出格式
 formatter = logging.Formatter('%(asctime)s %(levelname)s  %(message)s --> %(filename)s(%(lineno)d)')

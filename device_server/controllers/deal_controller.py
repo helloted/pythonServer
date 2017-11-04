@@ -8,7 +8,7 @@ caohaozhi@swindtech.com
 
 from super_models.deal_model import Deal
 from super_models.database import Session
-from super_models.store_model import Store
+from super_models.device_store_model import DeviceStore
 import hashlib
 from log_util.device_logger import logger
 from device_server.utils.comment import b64_aes_dec, aes_enc_b64
@@ -45,27 +45,23 @@ def upload_deal(data,tcp_socket):
         if not deal_sn:
             logger.error('deal_sn is null')
             send = fail_response(tcp_socket.device_sn, data, errors.ERROR_Deal_Received_Failed)
-
-
-        save_event = gevent.spawn(save_origin_deal_to_folder,device_sn,deal_sn,content_json)
-        create_event = gevent.spawn(create_deal_record,device_sn,deal_sn)
-        gevent.joinall([save_event,create_event])
-
-        if save_event.value and create_event.value == 1:
-            send = success_response(device_sn,data)
-            try:
-                # 将订单送入消息通道
-                send_deal_to_celery(device_sn, deal_sn, content_json)
-            except Exception,e:
-                logger.error(e)
-            else:
-                logger.info('{deal_sn} deal received, saved, sent to convert success'.format(deal_sn=deal_sn))
-        elif create_event.value == 2:
-            logger.info('{deal_sn} repeated received, ignore this deal'.format(deal_sn=deal_sn))
-            send = success_response(device_sn, data)
         else:
-            send = fail_response(device_sn, data, errors.ERROR_Deal_Received_Failed)
-            logger.info('received deal {deal_sn} failed, save {save}, create {create}'.format(deal_sn=deal_sn,save=save_event.value,create=create_event.value))
+            save_event = gevent.spawn(save_origin_file_to_folder,device_sn,deal_sn,content_json)
+            update_event = gevent.spawn(update_deal_record,device_sn,deal_sn)
+            gevent.joinall([save_event,update_event])
+
+            if save_event.value and update_event.value == 1:
+                send = success_response(device_sn,data)
+                try:
+                    # 将订单送入消息通道
+                    send_deal_to_celery(device_sn, deal_sn, content_json)
+                except Exception,e:
+                    logger.error(e)
+                else:
+                    logger.info('{deal_sn} deal received, saved, sent to convert success'.format(deal_sn=deal_sn))
+            else:
+                send = fail_response(device_sn, data, errors.ERROR_Deal_Received_Failed)
+                logger.info('received deal {deal_sn} failed, save {save}, create {create}'.format(deal_sn=deal_sn,save=save_event.value,create=update_event.value))
 
     # 回复客户端上传订单情况
     try:
@@ -76,9 +72,8 @@ def upload_deal(data,tcp_socket):
         logger.info(send.log)
 
 
-def save_origin_deal_to_folder(device_sn,deal_sn, content_json):
+def save_origin_file_to_folder(device_sn,deal_sn, content_json):
     super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
-    full_time_str = datetime.now().strftime('%H_%M_%S')
 
     date_str = datetime.now().strftime('%Y%m%d')
 
@@ -90,6 +85,10 @@ def save_origin_deal_to_folder(device_sn,deal_sn, content_json):
     #  62010010001003r3fe3d.txt
     file_path = folder_path + '/' + deal_sn +'.txt'
 
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+        logger.info('repeated deal_sn {deal_sn},remove old file'.format(deal_sn=deal_sn))
+
     try:
         fh = open(file_path, 'w')
         fh.write(content_json)
@@ -98,38 +97,39 @@ def save_origin_deal_to_folder(device_sn,deal_sn, content_json):
         logger.error(e)
         return False
     else:
-        logger.info('orginal file saved:' + file_path)
+        logger.info('original file saved:' + file_path)
         return True
 
 
-def create_deal_record(device_sn, deal_sn):
+def update_deal_record(device_sn, deal_sn):
     session = Session()
     try:
-        deal = session.query(DealStatus).filter(DealStatus.deal_sn==deal_sn).first()
+        deal_status = session.query(DealStatus).filter(DealStatus.deal_sn==deal_sn).first()
     except Exception,e:
         logger.error(e)
+        return 0
     else:
-        if deal:
-            return 2  # 重复上传同一个deal_sn，不需要再次解析
-        else:
-            now_msec = int(round(time.time() * 1000))
+        if not deal_status:
             deal_status = DealStatus()
-            deal_status.deal_sn = deal_sn
-            deal_status.device_sn = device_sn
-            deal_status.receive_time = now_msec
-            deal_status.status = 0  # 已接收,但未解析
+            session.add(deal_status)
+        else:
+            logger.info('repeated deal_sn {deal_sn}'.format(deal_sn=deal_sn))
 
-            try:
-                session.add(deal_status)
-                session.commit()
-            except Exception, e:
-                logger.error(e)
-                return 0 # 建档失败，需要重新上传
-            else:
-                return 1 # 建档成功
+        now_msec = int(round(time.time() * 1000))
+        deal_status.deal_sn = deal_sn
+        deal_status.device_sn = device_sn
+        deal_status.receive_time = now_msec
+        deal_status.status = 0  # 已接收,但未解析
+
+        try:
+            session.commit()
+        except Exception, e:
+            logger.error(e)
+            return 0 # 建档失败，需要重新上传
+        else:
+            return 1 # 建档成功
     finally:
         session.close()
-
 
 
 def send_deal_to_celery(device_sn,deal_sn,content):
@@ -418,22 +418,7 @@ def save_order(order, device_sn, store_id):
     deal.datetime = datetime.fromtimestamp(int(int(deal.time) / 1000))
 
     deal.store_id = store_id
-    store_name = r_store_info.get(str(store_id))
-    if not store_name:
-        try:
-            store = store_session.query(Store).filter_by(store_id=store_id).first()
-        except Exception, e:
-            logger.error(e)
-        else:
-            if store:
-                store_name = store.name
-            else:
-                store_name = ''
-            deal.store_name = store_name
 
-            r_store_info.set(str(store_id), store_name)
-        finally:
-            store_session.close()
 
     total_price = order.get('total_price')
     if not total_price:

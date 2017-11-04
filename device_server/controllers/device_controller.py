@@ -20,9 +20,9 @@ import redis_manager.device_redis as device_redis
 import time,os
 from device_server.db_tool import SessionContext
 from super_models.history_model import EventsHistroy
-from super_models.store_model import Store
 from super_models.device_key_model import DeviceKey
 import random,string,hashlib,traceback
+from super_models.device_store_model import DeviceStore
 
 def pre_connect(data,tcp_socket):
     token = ''.join(random.sample(string.ascii_letters + string.digits, 6))
@@ -36,6 +36,7 @@ def pre_connect(data,tcp_socket):
         logger.error(e)
     else:
         logger.info(send.log)
+
 
 def init_connect(data,tcp_socket,sockets):
     seq = data.get('seq')
@@ -148,7 +149,6 @@ def init_connect(data,tcp_socket,sockets):
             tcp_socket.close()
         else:
             tcp_socket.device_sn = device.sn
-            tcp_socket.store_id = device.store_id
 
             content = {}
             content['newest_setting_version'] = device.newest_setting_version
@@ -164,6 +164,7 @@ def init_connect(data,tcp_socket,sockets):
             content['newest_url'] = device.newest_url
             content['add_qr'] = device.add_qr
             content['justification'] = device.justification
+            content['qr_remark'] = device.qr_remark
 
             if device.logo_new:
                 if device.logo_urls:
@@ -244,10 +245,10 @@ def heart_beat(data,tcp_socket):
                 history.start_time = int(time.time())
                 history.type = 2
                 history.status = 0
-                store = session.query(Store).filter(Store.store_id==Device.store_id,Device.sn==tcp_socket.device_sn).first()
-                if store:
-                    history.store_id = store.store_id
-                    history.store_name = store.name
+                device_store = session.query(DeviceStore).filter(DeviceStore.device_sn==tcp_socket.device_sn).first()
+                if device_store:
+                    history.store_id = device_store.store_id
+                    history.store_name = device_store.store_name
 
                 session.add(history)
             session.commit()

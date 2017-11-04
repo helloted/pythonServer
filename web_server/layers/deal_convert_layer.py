@@ -9,11 +9,12 @@ caohaozhi@swindtech.com
 from flask import Blueprint
 from flask import request
 import os
-from super_models.device_model import Device
 from super_models.deal_status_model import DealStatus
 from super_models.database import Session
 from web_server.models import SessionContext
-from web_server.response.resp import add_headers,success_response,failed_response
+from web_server.utils.handles import transfer
+from web_server.utils.response import response_success,response_failed
+from web_server.utils import errors
 import time,json
 from redis_manager import r_queue
 from log_util.web_demo_logger import logger
@@ -43,29 +44,25 @@ def get_files_info():
 
     return data
 
+
 @node_deal_convert.route('/list', methods=['GET'])
-@add_headers
+@transfer
 def deal_list():
     data = get_files_info()
-    return success_response(data)
+    resp = response_success(data)
+    logger.info(resp.log)
+    return resp.resp_data
 
 
 @node_deal_convert.route('/event', methods=['POST'])
-@add_headers
-def deal_event():
-    body = request.form
-    if not body:
-        body = request.data
-
-    if body and isinstance(body,str):
-        body = eval(body)
-
-    logger.info(body)
-
-    deal_name = body.get('deal_name')
-    event = body.get('event')
+@transfer
+def deal_event(post_body):
+    deal_name = post_body.get('deal_name')
+    event = post_body.get('event')
     if not deal_name or not event:
-        return failed_response(101,'para minssing')
+        resp = response_failed(errors.ERROR_Para_Error)
+        logger.info(resp.log)
+        return resp.resp_data
 
     event = int(event)
 
@@ -74,8 +71,10 @@ def deal_event():
 
     file_path = folder_path + '/' + deal_name
 
-    if not os.path.exists(folder_path):
-        return failed_response(110,'{deal_name} not exit'.format(deal_name=deal_name))
+    if not os.path.exists(file_path):
+        resp = response_failed(errors.ERROR_Deal_Not_Exist)
+        logger.info(resp.log)
+        return resp.resp_data
     else:
         if event == 1:
             with open(file_path,'r') as file:
@@ -99,7 +98,9 @@ def deal_event():
                 session.close()
 
         data = get_files_info()
-        return success_response(data)
+        resp = response_success(data)
+        logger.info(resp.log)
+        return resp.resp_data
 
 
 def send_deal_to_celery(device_sn,deal_sn,content):

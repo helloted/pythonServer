@@ -34,7 +34,6 @@ def run_webserver():
                                     (r"/devices/filter", DevicesFilterHandler),
                                     (r"/device_detail", DeviceDetailHandler),
                                     (r"/device_setting", DeviceSettingHandler),
-                                    (r"/app_update", APPUpdateHandler),
                                     (r"/app_list", APPListHandler),
                                     (r"/statistics/online", StatisticsOnlineHandler),
                                     (r"/user/login", LoginHandler),
