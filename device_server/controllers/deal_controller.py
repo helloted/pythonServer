@@ -37,6 +37,7 @@ def upload_deal(data,tcp_socket):
     try:
         content = data.get('content')
         deal_sn = content.get('deal_sn')
+        deal_time = content.get('deal_time')
         content_json = json.dumps(content)
     except Exception,e:
         logger.error(e)
@@ -46,7 +47,7 @@ def upload_deal(data,tcp_socket):
             logger.error('deal_sn is null')
             send = fail_response(tcp_socket.device_sn, data, errors.ERROR_Deal_Received_Failed)
         else:
-            save_event = gevent.spawn(save_origin_file_to_folder,device_sn,deal_sn,content_json)
+            save_event = gevent.spawn(save_origin_file_to_folder,device_sn,deal_sn,deal_time,content_json)
             update_event = gevent.spawn(update_deal_record,device_sn,deal_sn)
             gevent.joinall([save_event,update_event])
 
@@ -72,10 +73,11 @@ def upload_deal(data,tcp_socket):
         logger.info(send.log)
 
 
-def save_origin_file_to_folder(device_sn,deal_sn, content_json):
+def save_origin_file_to_folder(device_sn,deal_sn,deal_time,content_json):
     super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
 
-    date_str = datetime.now().strftime('%Y%m%d')
+    deal_sec = int(int(deal_time)/1000)
+    date_str = time.strftime("%Y%m%d", time.localtime(deal_sec))
 
     # /files/original/6201001000100/20171023/
     folder_path = super_path + '/files/original/'+ device_sn + '/' + date_str
@@ -458,3 +460,8 @@ def save_order(order, device_sn, store_id):
     finally:
         new_session.close()
 
+# if __name__ == '__main__':
+#     timestamp = 1510217234828
+#     deal_sec = int(int(timestamp)/1000)
+#     date_str = time.strftime("%Y%m%d", time.localtime(deal_sec))
+#     print date_str

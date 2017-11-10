@@ -18,8 +18,6 @@ from log_util.web_demo_logger import logger
 from redis_manager import redis_web_device
 from web_server.utils import errors
 
-alive_timeout = 10
-
 node_device=Blueprint('device_layer',__name__,)
 
 
@@ -187,25 +185,6 @@ def device_setting(body):
         logger.info(resp.log)
         return resp.resp_data
 
-    # with SessionContext() as session:
-    #     device = session.query(Device).filter_by(sn=device_sn).first()
-    #     if device:
-    #         for key in body:
-    #             # if key and not body[key]:
-    #             #     continue
-    #             if key == 'bluetooth_white_list' or key == 'ip_white_list' or key == 'cut_cmds' or key == 'order_invalid_keys' or key == 'order_valid_keys':
-    #                 device.__setattr__(key, json.dumps(body[key]))
-    #             else:
-    #                 device.__setattr__(key, body[key])
-    #         device.setting_time = int(time.time())
-    #         session.commit()
-    #         session.result = success_resp()
-    #
-    #         content = {'device_sn': device.sn}
-    #         redis_web_device.publish('cmd_setting', content)
-    #     else:
-    #         session.result = failed_resp_full(2, 'no such device')
-
     now_msec = int(round(time.time() * 1000))
     send_msg_sn = device_sn + str(now_msec)
 
@@ -231,7 +210,7 @@ def device_setting(body):
 def wait_for_push_result(channel_name,send_msg_sn,redis_sub):
     now = int(time.time())
     last_time = 0
-    while last_time < alive_timeout:
+    while last_time < 10:
         last_time = int(time.time()) - now
         data = redis_sub.parse_response(block=False, timeout=5)
         if data and data[0] == 'message' and data[1] == channel_name and data[2]:

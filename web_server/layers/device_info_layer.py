@@ -146,7 +146,7 @@ def device_detail():
     return session.result.resp_data
 
 
-@node_device_info.route('/filter', methods=['GET'])
+@node_device_info.route('/filter', methods=['OPTIONS','POST'])
 @transfer
 def device_filter(body):
     page = body.get('page')

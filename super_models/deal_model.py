@@ -43,7 +43,7 @@ class Deal(Base):
     device_sn = Column(String(32), ForeignKey('device.sn'),index=True)
 
     # 店铺ID
-    store_id = Column(BigInteger, ForeignKey('store.store_id'))
+    store_id = Column(BigInteger)
 
     # 店铺名称
     store_name = Column(String(64))

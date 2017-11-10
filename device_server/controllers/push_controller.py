@@ -48,6 +48,10 @@ def receive_push_queue():
         if task_type == 'print_content':
             cloud_print(task_dict)
 
+        # 更新设备设置
+        if task_type == 'device_setting':
+            cloud_setting(task_dict)
+
         gevent.sleep(0)
 
 
@@ -127,139 +131,57 @@ def cloud_print(task_dict):
     push_to_device_handle(device_sn=device_sn, cmd=cmd, content=content, seq=seq, msg_sn=msg_sn)
 
 
-def cloud_setting(device_sn):
-    device_socket = sockets_controller.get_socket(device_sn)
-    if not device_socket:
-        logger.info('cannot find the device:{device} to update setting'.format(device=device_sn))
-    else:
-        logger.info('get the tcp_socket:' + device_sn)
+def cloud_setting(task_dict):
+    device_sn = task_dict.get('device_sn')
+    msg_sn = task_dict.get('msg_sn')
+    cmd = 'update_setting'
+    seq = 18
+    msg_content = task_dict.get('content')
+    content = collections.OrderedDict()
+    content['msg_sn'] = msg_sn
+    content['device_sn'] = device_sn
+    with SessionContext() as session:
+        device = session.query(Device).filter_by(sn=device_sn).first()
 
-        content = collections.OrderedDict()
-        with SessionContext() as session:
-            device = session.query(Device).filter_by(sn=device_sn).first()
+        for key in msg_content:
+            if key and not msg_content[key]:
+                continue
+            if key == 'bluetooth_white_list' or key == 'ip_white_list' or key == 'cut_cmds' or key == 'order_invalid_keys' or key == 'order_valid_keys':
+                device.__setattr__(key, json.dumps(msg_content[key]))
+            else:
+                device.__setattr__(key, msg_content[key])
+        device.setting_time = int(time.time())
 
-            content['newest_setting_version'] = device.newest_setting_version
-            content['wifi_name'] = device.wifi_name
-            content['wifi_password'] = device.wifi_password
-            content['wifi_encrypt_type'] = device.wifi_encrypt_type
-            content['capture_baudrate'] = device.capture_baudrate
-            content['app_print_baudrate'] = device.app_print_baudrate
-            content['app_received_baudrate'] = device.app_received_baudrate
-            content['net_port'] = device.net_port
-            content['ip_white_list'] = None
-            content['bluetooth_white_list'] = None
-            content['justification'] = device.justification
-            content['add_qr'] = device.add_qr
+        content['newest_setting_version'] = device.newest_setting_version
+        content['wifi_name'] = device.wifi_name
+        content['wifi_password'] = device.wifi_password
+        content['wifi_encrypt_type'] = device.wifi_encrypt_type
+        content['capture_baudrate'] = device.capture_baudrate
+        content['app_print_baudrate'] = device.app_print_baudrate
+        content['app_received_baudrate'] = device.app_received_baudrate
+        content['net_port'] = device.net_port
+        content['ip_white_list'] = None
+        content['bluetooth_white_list'] = None
+        content['justification'] = device.justification
+        content['add_qr'] = device.add_qr
 
-            if device.ip_white_list:
-                content['ip_white_list'] = json.loads(device.ip_white_list)
+        if device.ip_white_list:
+            content['ip_white_list'] = json.loads(device.ip_white_list)
 
-            if device.bluetooth_white_list:
-                content['bluetooth_white_list'] = json.loads(device.bluetooth_white_list)
+        if device.bluetooth_white_list:
+            content['bluetooth_white_list'] = json.loads(device.bluetooth_white_list)
 
-            if device.order_invalid_keys:
-                content['order_invalid_keys'] = json.loads(device.order_invalid_keys)
+        if device.order_invalid_keys:
+            content['order_invalid_keys'] = json.loads(device.order_invalid_keys)
 
-            if device.order_valid_keys:
-                content['order_valid_keys'] = json.loads(device.order_valid_keys)
+        if device.order_valid_keys:
+            content['order_valid_keys'] = json.loads(device.order_valid_keys)
 
-            if device.cut_cmds:
-                content['cut_cmds'] = json.loads(device.cut_cmds)
+        if device.cut_cmds:
+            content['cut_cmds'] = json.loads(device.cut_cmds)
+        session.commit()
 
-        send = push_data(device_sn,'update_setting',10,content)
-        try:
-            device_socket.send(send.data)
-        except Exception, e:
-            logger.error(e)
-            logger.info('can not send {device} for device setting'.format(device=device_sn))
-            sockets_controller.pop_socket(device_sn)
-        else:
-            logger.info(send.log)
-
-
-# def device_update_app(web_data):
-#     device_sn = web_data.get('device_sn')
-#     newest_url = web_data.get('newest_url')
-#     device_socket = sockets_controller.get_socket(device_sn)
-#
-#     if not device_socket:
-#         logger.info('cannot find the device:{device} to update app'.format(device=device_sn))
-#     else:
-#         logger.info('ready to update app, get the tcp_socket:' + device_sn)
-#         content = collections.OrderedDict()
-#         content['newest_url'] = newest_url
-#         update_send = push_data(device_sn,'update_app',12,content)
-#         try:
-#             device_socket.send(update_send.data)
-#         except Exception, e:
-#             logger.error(e)
-#             logger.info('can not send to the {device} for update app'.format(device=device_sn))
-#             sockets_controller.pop_socket(device_sn)
-#         else:
-#             logger.info(update_send.log)
-#
-#
-# def device_repeat_upload_deal(web_data):
-#     device_sn = web_data.get('device_sn')
-#     start_time = web_data.get('start_time')
-#     end_time = web_data.get('end_time')
-#     msg_sn = web_data.get('msg_sn')
-#     device_socket = sockets_controller.get_socket(device_sn)
-#
-#     if not device_socket:
-#         publish_cannot_find_device(device_sn,msg_sn=msg_sn)
-#         logger.info('cannot find the device:{device} to repeat_upload_deal'.format(device=device_sn))
-#     else:
-#         content = collections.OrderedDict()
-#         content['start_time'] = start_time
-#         content['end_time'] = end_time
-#         update_send = push_data(device_sn,'repeat_upload_deal',14,content)
-#         try:
-#             device_socket.send(update_send.data)
-#         except Exception, e:
-#             logger.error(e)
-#             logger.info('can not send to the {device} for the repeat_upload_deal'.format(device=device_sn))
-#             sockets_controller.pop_socket(device_sn)
-#         else:
-#             logger.info(update_send.log)
-#
-#
-# def receive_web_redis_publish():
-#     while True:
-#         ps = redis_web_device.pubsub()
-#         ps.subscribe(['cmd_print', 'cmd_setting'])
-#         for item in ps.listen():
-#             if item['type'] == 'message' and item['channel'] == 'cmd_print':
-#                 data_str = item['data']
-#                 try:
-#                     data = eval(data_str)
-#                     logger.info(data)
-#                 except Exception, e:
-#                     logger.error(e)
-#                 else:
-#                     cloud_print(data)
-#
-#             if item['type'] == 'message' and item['channel'] == 'cmd_setting':
-#                 data_str = item['data']
-#                 try:
-#                     data = eval(data_str)
-#                     logger.info(data)
-#                 except Exception, e:
-#                     logger.error(e)
-#                 else:
-#                     device_sn = data.get('device_sn')
-#                     cloud_setting(str(device_sn))
-#
-#             if item['type'] == 'message' and item['channel'] == 'cmd_update_app':
-#                 data_str = item['data']
-#                 try:
-#                     data = eval(data_str)
-#                     logger.info(data)
-#                 except Exception, e:
-#                     logger.error(e)
-#                 else:
-#                     device_update_app(data)
-#         gevent.sleep(0)
+    push_to_device_handle(device_sn=device_sn, cmd=cmd, content=content, seq=seq, msg_sn=msg_sn)
 
 
 def update_token(task):

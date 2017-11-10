@@ -15,7 +15,7 @@ def response_success(data=None):
 
     resp_json = json.dumps(resp_dict)
 
-    log = 'HF -> Client: {resp}'.format(resp=resp_json)
+    log = 'HF -> WEB: {resp}'.format(resp=resp_json)
     resp = ResponseData(resp_json,log)
 
     return resp
@@ -28,7 +28,7 @@ def response_failed(error):
 
     resp_json = json.dumps(resp_dict)
 
-    log = 'HF -> Client: {resp}'.format(resp=resp_json)
+    log = 'HF -> WEB: {resp}'.format(resp=resp_json)
     resp = ResponseData(resp_json,log)
 
     return resp

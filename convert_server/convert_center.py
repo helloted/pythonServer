@@ -147,9 +147,6 @@ def save_deal_to_DB(device_sn,deal_sn,convert_result):
     if not store_name:
         store_name = 'NoStore'
 
-
-    logger.info(store_id)
-
     session = Session()
     try:
         deal = session.query(Deal).filter(Deal.sn==deal_sn).first()

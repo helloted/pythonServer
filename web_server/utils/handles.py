@@ -23,19 +23,19 @@ def transfer(func):
 
             if body and isinstance(body, str):
                 try:
-                    body = eval(body)
+                    body = json.loads(body)
                 except Exception:
                     logger.error(traceback.format_exc())
-                    logger.info('Client -> HF: {method} {route} {post_str}'.format(method=request.method, route=route,post_str=body))
+                    logger.info('WEB -> HF: {method} {route} {post_str}'.format(method=request.method, route=route,post_str=body))
             if body:
-                logger.info('Client -> HF: {method} {route} {body}'.format(method=request.method, route=route,body=json.dumps(body)))
+                logger.info('WEB -> HF: {method} {route} {body}'.format(method=request.method, route=route,body=json.dumps(body)))
             else:
                 body = {}
             result = func(body, *args, **kwargs)
         elif request.method == 'OPTIONS':
             result = response_success().resp_data
         else:
-            logger.info('Client -> HF: {method} {route}'.format(method=request.method, route=route))
+            logger.info('WEB -> HF: {method} {route}'.format(method=request.method, route=route))
             result = func(*args, **kwargs)
 
         resp = Response(result)
