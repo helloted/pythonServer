@@ -309,4 +309,4 @@ def goods_show():
     print response.read()
 
 if __name__ == '__main__':
-    goods_show()
+    article_like()

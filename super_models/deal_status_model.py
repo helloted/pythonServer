@@ -20,6 +20,9 @@ class DealStatus(Base):
     # 设备SN
     device_sn = Column(String(32))
 
+    # 订单时间
+    deal_time = Column(BigInteger)
+
     # device_server收到的时间毫秒
     receive_time = Column(BigInteger)
 

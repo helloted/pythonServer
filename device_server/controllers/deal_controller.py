@@ -460,8 +460,24 @@ def save_order(order, device_sn, store_id):
     finally:
         new_session.close()
 
-# if __name__ == '__main__':
-#     timestamp = 1510217234828
-#     deal_sec = int(int(timestamp)/1000)
-#     date_str = time.strftime("%Y%m%d", time.localtime(deal_sec))
-#     print date_str
+
+__radix_char = '8GSh3dg6OA1PtU2ycx5jDbukFXRzQa9Ip4rVWZm7Ms0lNqLiwCoYvTEBfKJHne'
+__radix = len(__radix_char)
+__ch2val = {}
+__index = 0
+for c in __radix_char:
+    __ch2val[c] = __index
+    __index += 1
+
+def itoa(num):
+    result = ""
+    while num > 0:
+        result = __radix_char[num % __radix] + result
+        num /= __radix
+    return result
+
+def atoi(s):
+    result = 0
+    for c in s:
+        result = __ch2val[c] + result * __radix
+    return result

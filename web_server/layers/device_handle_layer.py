@@ -17,8 +17,28 @@ from redis_manager import r_queue
 from log_util.web_demo_logger import logger
 from redis_manager import redis_web_device
 from web_server.utils import errors
+import os
+from super_models.database import Session
+from super_models.device_model import Device
 
 node_device=Blueprint('device_layer',__name__,)
+
+
+@node_device.route('/interactive_setting_list', methods=['GET'])
+@transfer
+def interactive_setting_list():
+    superpath = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,os.pardir))
+    folder = superpath + '/files/interactive_setting'
+    file_list = os.listdir(folder)
+    data = []
+    for file in file_list:
+        file_dict = {}
+        file_dict['name'] = file
+        file_dict['time'] = int(os.path.getctime(folder + '/' + file))
+        data.append(file_dict)
+    resp = response_success(data)
+    logger.info(resp.log)
+    return resp.resp_data
 
 
 @node_device.route('/qr_info', methods=['GET'])
@@ -39,6 +59,40 @@ def qr_setting():
             session.result = response_failed(errors.ERROR_No_Such_Deivce)
     logger.info(session.result.log)
     return session.result.resp_data
+
+
+@node_device.route('/interactive_setting', methods=['POST','OPTIONS'])
+@transfer
+def interactive_setting(post_body):
+    device_sn = post_body.get('device_sn')
+    url_type = post_body.get('type')
+    url = post_body.get('url')
+
+    if not device_sn or url_type is None or not url:
+        resp = response_failed(errors.ERROR_Para_Error)
+        logger.info(resp.log)
+        return resp.resp_data
+
+    now_msec = int(round(time.time() * 1000))
+    send_msg_sn = device_sn + str(now_msec)
+
+    # 先建立监听
+    redis_sub = redis_web_device.pubsub()
+    channel_name = 'channel_device_pub_web' + str(device_sn)
+    redis_sub.subscribe([channel_name,])
+    redis_sub.listen()
+
+    data = {}
+    data['device_sn'] = device_sn
+    data['type'] = 'interactive_setting'
+    data['url_type'] = url_type
+    data['url'] = url
+    data['msg_sn'] = send_msg_sn
+    r_queue.lpush('devices_queue', data)
+
+    result = wait_for_push_result(channel_name,send_msg_sn,redis_sub)
+    logger.info(result.log)
+    return result.resp_data
 
 
 @node_device.route('/upload_log', methods=['POST','OPTIONS'])
@@ -194,13 +248,29 @@ def device_setting(body):
     redis_sub.subscribe([channel_name,])
     redis_sub.listen()
 
-    # 将消息传递给device_server
-    data = {}
-    data['type'] = 'device_setting'
-    data['device_sn'] = device_sn
-    data['content'] = body
-    data['msg_sn'] = send_msg_sn
-    r_queue.lpush('devices_queue', data)
+    session = Session()
+    device = session.query(Device).filter_by(sn=device_sn).first()
+    if device:
+        for key in body:
+            # if key and not body[key]:
+            #     continue
+            if key == 'bluetooth_white_list' or key == 'ip_white_list' or key == 'cut_cmds' or key == 'order_invalid_keys' or key == 'order_valid_keys':
+                device.__setattr__(key, json.dumps(body[key]))
+            else:
+                device.__setattr__(key, body[key])
+        device.setting_time = int(time.time())
+        try:
+            session.commit()
+        except Exception,e:
+            logger.info(e)
+        else:
+            # 将消息传递给device_server
+            data = {}
+            data['type'] = 'device_setting'
+            data['device_sn'] = device_sn
+            data['content'] = body
+            data['msg_sn'] = send_msg_sn
+            r_queue.lpush('devices_queue', data)
 
     result = wait_for_push_result(channel_name,send_msg_sn,redis_sub)
     logger.info(result.log)

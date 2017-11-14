@@ -8,7 +8,7 @@ APP首页处理
 import gevent
 from flask import Blueprint
 from flask import request
-from app_server.utils.request_handle import basic_unpack
+from app_server.utils.request_handle import request_unpack
 from app_server.controllers.banner_controller import get_current_banners
 from app_server.controllers.hot_category_controller import get_hot_sotres
 from app_server.controllers.special_store_controller import get_recommend_stores
@@ -20,12 +20,13 @@ from app_server.models.user_model import User
 from app_server.models.comment_model import Comment
 import json
 from app_server.response import errors
+from log_util.app_logger import logger
 
 node_homepage=Blueprint('homepage_layer',__name__,)
 
 
 @node_homepage.route('/', methods=['GET'])
-@basic_unpack
+@request_unpack
 def homepage():
     paras = request.args
     region_code = paras.get('region_code')
@@ -44,11 +45,11 @@ def homepage():
     data['hots'] = hot_stores
     data['recomments'] = recommend_stores
 
-    return success_resp(data)
+    return success_resp(data).data
 
 
 @node_homepage.route('/banners', methods=['GET'])
-@basic_unpack
+@request_unpack
 def banner_query():
     paras = request.args
     region_code = paras.get('region_code')
@@ -56,11 +57,14 @@ def banner_query():
     banners = get_current_banners(region_code)
     data = banners
 
-    return success_resp(data)
+    resp = success_resp(data)
+    logger.info(resp.log)
+
+    return resp.data
 
 
 @node_homepage.route('/hots', methods=['GET'])
-@basic_unpack
+@request_unpack
 def hots():
     paras = request.args
     region_code = paras.get('region_code')
@@ -68,11 +72,11 @@ def hots():
     hots = get_hot_sotres(region_code)
     data = hots
 
-    return success_resp(data)
+    return success_resp(data).data
 
 
 @node_homepage.route('/recommands', methods=['GET'])
-@basic_unpack
+@request_unpack
 def recommands():
     paras = request.args
     region_code = paras.get('region_code')
@@ -81,11 +85,11 @@ def recommands():
 
     data = recommands
 
-    return success_resp(data)
+    return success_resp(data).data
 
 
 @node_homepage.route('/goods_show', methods=['GET'])
-@basic_unpack
+@request_unpack
 def goods_show():
     paras = request.args
     region_code = paras.get('region_code')
@@ -152,6 +156,7 @@ def goods_show():
             data.append(artic_dict)
 
         session.result = success_resp(data)
-    return success_resp(data)
+    logger.info(session.result.log)
+    return session.result.data
 
 

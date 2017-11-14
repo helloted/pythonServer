@@ -7,7 +7,7 @@ caohaozhi@swindtech.com
 """
 from flask import Blueprint
 from flask import request
-from app_server.utils.request_handle import basic_unpack,login_required
+from app_server.utils.request_handle import request_unpack,login_required
 from app_server.response import success_resp,failed_resp
 from redis_manager import redis_center
 from app_server.controllers.user_contrller import user_add
@@ -21,6 +21,7 @@ from app_server.utils import db_error_record
 from redis_manager import redis_center
 from app_server.utils.imgtool import image_save
 from app_server.models.favorite_model import FavoriteStore
+from log_util.app_logger import logger
 
 user_token_key = 'app_user_token'
 
@@ -28,38 +29,40 @@ node_user=Blueprint('user_layer',__name__,)
 
 
 @node_user.route('/register', methods=['POST'])
-@basic_unpack
-def user_register():
-    body = request.json
+@request_unpack
+def user_register(body):
     if not body:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     else:
         code = body.get('code')
         password = body.get('password')
         phone = body.get('phone')
 
         if not phone and not password:
-            return  failed_resp(ERROR_Parameters)
+            resp = failed_resp(ERROR_Parameters)
+            logger.info(resp.log)
+            return resp.data
 
         store_code = redis_center.get(phone)
 
         if not store_code or not store_code == code:
-            return failed_resp(ERROR_Verification_Code)
+            return failed_resp(ERROR_Verification_Code).data
 
         with SessionContext(db_error_record) as session:
             user = session.query(User).filter_by(phone=phone).first()
             if user:
-                return failed_resp(ERROR_Phone_Exists)
+                return failed_resp(ERROR_Phone_Exists).data
 
             user_add(phone, password)
             data = {}
-            return success_resp(data)
+            return success_resp(data).data
 
 
 @node_user.route('/password', methods=['POST'])
-@basic_unpack
-def user_password():
-    body = request.json
+@request_unpack
+def user_password(body):
     if not body:
         return failed_resp(ERROR_Parameters)
     else:
@@ -68,7 +71,9 @@ def user_password():
         phone = body.get('phone')
 
         if not phone and not password:
-            return  failed_resp(ERROR_Parameters)
+            resp = failed_resp(ERROR_Parameters)
+            logger.info(resp.log)
+            return resp.data
 
         store_code = redis_center.get(phone)
 
@@ -80,15 +85,14 @@ def user_password():
                 user.password = password
                 session.commit()
                 data = {}
-                return success_resp(data)
+                return success_resp(data).data
             else:
-                return failed_resp(ERROR_User_Null)
+                return failed_resp(ERROR_User_Null).data
 
 
 @node_user.route('/login', methods=['POST'])
-@basic_unpack
-def user_login():
-    body = request.json
+@request_unpack
+def user_login(body):
     if not body:
         return failed_resp(ERROR_Parameters)
     else:
@@ -115,25 +119,26 @@ def user_login():
                 count = session.query(FavoriteStore).filter_by(user_id=user.user_id).count()
                 data['favorite_amount'] = count
 
-                session.result =  success_resp(data)
+                session.result = success_resp(data)
             else:
-                session.result =  failed_resp(ERROR_Login_Failed)
-        return session.result
+                session.result = failed_resp(ERROR_Login_Failed)
+        logger.info(session.result.log)
+        return session.result.data
 
 
 @node_user.route('/logout', methods=['GET'])
-@basic_unpack
+@request_unpack
 def user_logout():
     paras = request.args
     user_id = paras.get('user_id')
     key = user_token_key + user_id
     redis_center.delete(key)
-    return success_resp()
+    return success_resp().data
 
 
 
 @node_user.route('/code', methods=['GET'])
-@basic_unpack
+@request_unpack
 def get_code():
     paras = request.args
 
@@ -148,14 +153,14 @@ def get_code():
 
         data = {}
         data['code'] = code
-        return success_resp(data)
+        return success_resp(data).data
     else:
-        return failed_resp(ERROR_Parameters)
+        return failed_resp(ERROR_Parameters).data
 
 
 
 @node_user.route('/', methods=['GET'])
-@basic_unpack
+@request_unpack
 @login_required
 def user():
     paras = request.args
@@ -169,18 +174,17 @@ def user():
                     continue
                 else:
                     data[key] = value
-            return success_resp(data)
+            return success_resp(data).data
         else:
-            return failed_resp(ERROR_User_Null)
+            return failed_resp(ERROR_User_Null).data
 
 
 @node_user.route('/update', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def user_update():
-    body = request.json
+def user_update(body):
     if not body:
-        return failed_resp(ERROR_Parameters)
+        return failed_resp(ERROR_Parameters).data
     else:
         user_id = request.args.get('user_id')
         with SessionContext() as session:
@@ -201,15 +205,15 @@ def user_update():
                 session.commit()
 
                 data = {}
-                return success_resp(data)
+                return success_resp(data).data
             else:
-                return failed_resp(ERROR_User_Null)
+                return failed_resp(ERROR_User_Null).data
 
 
 @node_user.route('/icon', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def user_icon():
+def user_icon(body):
     img = request.files['img']
     user_id = request.args.get('user_id')
     if not user_id:
@@ -222,5 +226,5 @@ def user_icon():
         data = {}
         data['icon'] = full_path
         session.result = success_resp(data)
-    return session.result
+    return session.result.data
 

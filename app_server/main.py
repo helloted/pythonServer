@@ -13,6 +13,7 @@ from app_server.layers.homepage_layer import node_homepage
 from app_server.layers.store_layer import node_store
 from app_server.layers.article_layer import node_article
 from app_server.layers.mine_layer import node_mine
+from app_server.layers.qr_layer import node_qr
 
 
 app = Flask(__name__)
@@ -24,6 +25,7 @@ app.register_blueprint(node_homepage, url_prefix='/homepage')
 app.register_blueprint(node_store, url_prefix='/store')
 app.register_blueprint(node_article, url_prefix='/article')
 app.register_blueprint(node_mine, url_prefix='/mine')
+app.register_blueprint(node_qr, url_prefix='/qr')
 
 
 

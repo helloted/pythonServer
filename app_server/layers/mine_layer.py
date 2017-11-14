@@ -7,7 +7,7 @@ caohaozhi@swindtech.com
 """
 from flask import Blueprint
 from flask import request
-from app_server.utils.request_handle import basic_unpack,login_required
+from app_server.utils.request_handle import request_unpack,login_required
 from app_server.models.favorite_model import FavoriteStore,FavoriteArticle
 from app_server.models import SessionContext
 from super_models.store_model import Store
@@ -18,13 +18,14 @@ from app_server.models.article_model import Article
 import json
 from app_server.models.user_model import User
 from app_server.controllers.article_controller import article_to_dict
+from log_util.app_logger import logger
 
 
 node_mine=Blueprint('mine_layer',__name__,)
 
 
 @node_mine.route('/favorite_store', methods=['GET'])
-@basic_unpack
+@request_unpack
 @login_required
 def favorite_store():
     user_id = request.args.get('user_id')
@@ -36,11 +37,12 @@ def favorite_store():
             little = convert_little_store(store)
             data.append(little)
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_mine.route('/favorite_article', methods=['GET'])
-@basic_unpack
+@request_unpack
 @login_required
 def favorite_article():
     user_id = request.args.get('user_id')
@@ -52,11 +54,12 @@ def favorite_article():
             dict =article_to_dict(article,session)
             data.append(dict)
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_mine.route('/post', methods=['GET'])
-@basic_unpack
+@request_unpack
 def article_list():
     user_id = request.args.get('user_id')
     if not user_id:
@@ -89,4 +92,5 @@ def article_list():
             data.append(one)
         session.result = success_resp(data)
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data

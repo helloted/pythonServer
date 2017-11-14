@@ -59,6 +59,43 @@ def upload_file():
     </form>
     '''
 
+
+@app.route('/interactive_setting', methods=['GET', 'POST'])
+def interactive_setting():
+    print 'enter upload'
+    if request.method == 'POST':
+        print 'enter post'
+        file = request.files['file']
+        if file:
+            filename = secure_filename(file.filename)
+            flod_path = super_path + '/files/interactive_setting'
+            if not os.path.exists(flod_path):
+                os.makedirs(flod_path)
+            try:
+                file.save(flod_path+'/'+filename)
+            except Exception,e:
+                re = {}
+                re['msg'] = 'failed'
+                re['code'] = 1
+                resp = json.dumps(re)
+                return Response(resp, mimetype='text/json')
+            else:
+                re = {}
+                re['msg'] = 'success'
+                re['code'] = 0
+                resp = json.dumps(re)
+                return Response(resp, mimetype='text/json')
+    return '''
+    <!doctype html>
+    <title>upload interactive_setting</title>
+    <h1>upload interactive_setting</h1>
+    <form action="" method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
+
+
 @app.route('/reco', methods=['GET', 'POST'])
 def upload_reco():
     print 'enter upload'
@@ -325,6 +362,7 @@ def upload():
     <p>上传打印机APP：<a href='/app'>APP</a></p>
     <p>上传打印Logo：<a href='/logo'>Logo</a></p>
     <p>上传订单解析脚本：<a href='/script'>脚本</a></p>
+    <p>上传打印机及交互设置文本：<a href='/interactive_setting'>交互设置</a></p>
     '''
 
 @app.route('/restart', methods=['GET', 'POST'])

@@ -178,10 +178,8 @@ def device_filter(body):
             online = body.get('online')
             online_list = device_redis.get_online_devices()
             if online:
-                logger.info('check on line')
                 query = query.filter(Device.sn.in_(online_list))
             else:
-                logger.info('check not online')
                 query = query.filter(~Device.sn.in_(online_list))
 
         query = query.limit(amount_int).offset(offset)

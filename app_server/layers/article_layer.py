@@ -8,7 +8,7 @@ caohaozhi@swindtech.com
 import gevent
 from flask import Blueprint
 from flask import request
-from app_server.utils.request_handle import basic_unpack,login_required
+from app_server.utils.request_handle import request_unpack,login_required
 from app_server.response import success_resp,failed_resp
 from app_server.response.errors import *
 from app_server.models import SessionContext
@@ -23,16 +23,16 @@ from app_server.models.user_model import User
 from app_server.controllers.article_controller import article_to_dict
 from super_models.store_model import Store
 from app_server.controllers.special_store_controller import convert_little_store
+from log_util.app_logger import logger
 
 node_article=Blueprint('article_layer',__name__,)
 
 
 @node_article.route('/add', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def article_add():
+def article_add(body):
     user_id = request.args.get('user_id')
-    body = request.form
     if not body:
         body = request.json
     deal_sn = body.get('deal_sn')
@@ -47,7 +47,9 @@ def article_add():
     text = body.get('text')
 
     if not deal_sn or not store_id:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     imgs = []
     img_count = 0
@@ -79,19 +81,24 @@ def article_add():
             session.add(article)
             session.commit()
             session.result = success_resp()
-        return session.result
+        logger.info(session.result.log)
+        return session.result.data
     else:
-        return failed_resp(ERROR_DataBase)
+        resp = failed_resp(ERROR_DataBase)
+        logger.info(resp.log)
+        return resp.data
 
 
 @node_article.route('/list', methods=['GET'])
-@basic_unpack
+@request_unpack
 def article_list():
     store_id = request.args.get('store_id')
     page = request.args.get('page')
     amount = request.args.get('amount')
     if not store_id or not page or not amount:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     page_int = int(page)
     amount_int = int(amount)
@@ -130,15 +137,18 @@ def article_list():
             data.append(artic_dict)
         session.result = success_resp(data)
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/', methods=['GET'])
-@basic_unpack
+@request_unpack
 def article():
     article_id = request.args.get('article_id')
     if not article_id:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     with SessionContext() as session:
         article = session.query(Article).filter_by(article_id=article_id).first()
@@ -224,14 +234,19 @@ def article():
         else:
             session.result = failed_resp(ERROR_Article_Null)
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/delete', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def article_delete():
-    article_id = request.json.get('article_id')
+def article_delete(body):
+    article_id = body.get('article_id')
+    if not article_id:
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     with SessionContext() as session:
         article = session.query(Article).filter_by(article_id=article_id).first()
         if article:
@@ -240,15 +255,15 @@ def article_delete():
             session.result = success_resp()
         else:
             session.result = failed_resp(ERROR_Article_Null)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/comment_add', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def comment_add():
+def comment_add(body):
     user_id = request.args.get('user_id')
-    body = request.json
     text = body.get('text')
     article_id = body.get('article_id')
     comment_type = int(body.get('type'))
@@ -263,7 +278,9 @@ def comment_add():
         replied_user_name = body.get('replied_user_name')
 
         if not replied_user_name or not replied_user_id or not replied_comment_id:
-            return failed_resp(ERROR_Parameters)
+            resp = failed_resp(ERROR_Parameters)
+            logger.info(resp.log)
+            return resp.data
 
     comment_id = get_comment_id()
     if comment_id:
@@ -301,19 +318,24 @@ def comment_add():
             com_dict['replied_user_name'] = replied_user_name
 
             session.result = success_resp(com_dict)
-        return session.result
+        logger.info(session.result.log)
+        return session.result.data
     else:
-        return failed_resp(ERROR_DataBase)
+        resp = failed_resp(ERROR_DataBase)
+        logger.info(resp.log)
+        return resp.data
 
 
 @node_article.route('/comments', methods=['GET'])
-@basic_unpack
+@request_unpack
 def comments():
     article_id = request.args.get('article_id')
     page = request.args.get('page')
     amount = request.args.get('amount')
     if not article_id or not page or not amount:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     page_int = int(page) - 1
     amount_int = int(amount)
@@ -335,14 +357,15 @@ def comments():
 
             data.append(com_dict)
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/comment_delete', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def comment_delete():
-    comment_id = request.json.get('comment_id')
+def comment_delete(body):
+    comment_id = body.get('comment_id')
     with SessionContext() as session:
         comment = session.query(Comment).filter_by(comment_id=comment_id).first()
         if comment:
@@ -351,14 +374,14 @@ def comment_delete():
             session.result = success_resp()
         else:
             session.result = failed_resp(ERROR_Comment_Null)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/like', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def article_like():
-    body = request.json
+def article_like(body):
     article_id = body.get('article_id')
     if 'add' in body:
         pass
@@ -367,7 +390,9 @@ def article_like():
     add = body.get('add')
     user_id = request.args.get('user_id')
     if not article_id or not user_id:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     with SessionContext() as session:
         like = session.query(LikeArticle).filter_by(article_id=article_id, user_id=user_id).first()
 
@@ -393,23 +418,27 @@ def article_like():
             session.commit()
             session.result = success_resp()
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/favorite', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def article_favorite():
-    body = request.json
+def article_favorite(body):
     article_id = body.get('article_id')
     if 'add' in body:
         pass
     else:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     add = body.get('add')
     user_id = request.args.get('user_id')
     if not article_id or not user_id:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     with SessionContext() as session:
         fav = session.query(FavoriteArticle).filter_by(article_id=article_id, user_id=user_id).first()
         if add and fav:
@@ -435,17 +464,20 @@ def article_favorite():
             session.commit()
             session.result = success_resp()
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_article.route('/like_list', methods=['GET'])
-@basic_unpack
+@request_unpack
 def like_list():
     article_id = request.args.get('article_id')
     page = request.args.get('page')
     amount = request.args.get('amount')
     if not article_id or not page or not amount:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     page_int = int(page)
     amount_int = int(amount)
@@ -465,7 +497,8 @@ def like_list():
 
         session.result = success_resp(like_users)
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 

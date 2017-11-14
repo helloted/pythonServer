@@ -8,7 +8,7 @@ APP-Store页处理
 import gevent
 from flask import Blueprint
 from flask import request
-from app_server.utils.request_handle import basic_unpack,login_required
+from app_server.utils.request_handle import request_unpack,login_required
 from app_server.response import success_resp,failed_resp
 from log_util.app_logger import logger
 from app_server.models import SessionContext
@@ -29,14 +29,16 @@ node_store=Blueprint('store_layer',__name__,)
 
 
 @node_store.route('/', methods=['GET'])
-@basic_unpack
+@request_unpack
 def store_detail():
     paras = request.args
     store_id = paras.get('store_id')
     with SessionContext() as session:
         store = session.query(Store).filter_by(store_id=store_id).first()
         if not store:
-            return failed_resp(ERROR_Parameters)
+            resp = failed_resp(ERROR_Parameters)
+            logger.info(resp.log)
+            return resp.data
         data = {}
         data['similars'] = None
 
@@ -63,24 +65,28 @@ def store_detail():
         if user_id:
             favorite = session.query(FavoriteStore).filter_by(store_id=store_id, user_id=user_id).first()
             data['favorite'] = bool(favorite)
-
-        return success_resp(data)
+        session.result = success_resp(data)
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/favorite', methods=['POST'])
-@basic_unpack
+@request_unpack
 @login_required
-def store_favorite():
-    body = request.json
+def store_favorite(body):
     store_id = body.get('store_id')
     if 'add' in body:
         pass
     else:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     add = body.get('add')
     user_id = request.args.get('user_id')
     if not store_id or not user_id:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     with SessionContext() as session:
         fav = session.query(FavoriteStore).filter_by(store_id=store_id, user_id=user_id).first()
         if add and fav:
@@ -105,11 +111,12 @@ def store_favorite():
             session.commit()
             session.result = success_resp()
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/filter', methods=['GET'])
-@basic_unpack
+@request_unpack
 def store_filter():
     # 排序
     order = request.args.get('order')
@@ -117,7 +124,9 @@ def store_filter():
     page = request.args.get('page')
     amount = request.args.get('amount')
     if not order or not region_code or not page or not amount:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     page = int(page)
     amount = int(amount)
@@ -161,7 +170,8 @@ def store_filter():
 
         session.result = success_resp(data)
 
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 
@@ -191,13 +201,15 @@ def haversine(lon1, lat1, lon2, lat2):  # 经度1，纬度1，经度2，纬度2 
 
 
 @node_store.route('/list', methods=['GET'])
-@basic_unpack
+@request_unpack
 def store_list():
     region_code = request.args.get('region_code')
     page = request.args.get('page')
     amount = request.args.get('amount')
     if not region_code or not page or not amount:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
 
     page = int(page)
     amount = int(amount)
@@ -213,18 +225,19 @@ def store_list():
             data.append(store_dict)
 
         session.result = success_resp(data)
-
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/setting', methods=['POST'])
-@basic_unpack
-def store_update():
-    body = request.form
+@request_unpack
+def store_update(body):
     if not body:
         body = request.json
     if not body:
-        return failed_resp(ERROR_Parameters)
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
     else:
         store_id = body.get('store_id')
         with SessionContext() as session:
@@ -237,14 +250,15 @@ def store_update():
                     continue
                 store.__setattr__(key,body[key])
             session.commit()
-            return success_resp()
+            session.result = success_resp()
+        logger.info(session.result.log)
+        return session.result.data
 
 
 @node_store.route('/icon', methods=['POST'])
-@basic_unpack
-def store_icon():
+@request_unpack
+def store_icon(body):
     img = request.files['img']
-    body = request.form
     if not body:
         body = request.json
     store_id = body.get('store_id')
@@ -258,19 +272,17 @@ def store_icon():
         data = {}
         data['icon'] = full_path
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/banner_add', methods=['POST','OPTIONS'])
-@basic_unpack
-def banner_add():
+@request_unpack
+def banner_add(body):
     if request.method == 'OPTIONS':
         return success_resp()
 
     img = request.files['img']
-    body = request.form
-    if not body:
-        body = request.json
     store_id = body.get('store_id')
     if not store_id:
         store_id = 0
@@ -289,13 +301,13 @@ def banner_add():
         data = {}
         data['banner'] = full_path
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/banner_delete', methods=['POST'])
-@basic_unpack
-def banner_delete():
-    body = request.form
+@request_unpack
+def banner_delete(body):
     if not body:
         body = request.json
     store_id = body.get('store_id')
@@ -314,18 +326,16 @@ def banner_delete():
         session.commit()
         data = {}
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/menu_add', methods=['POST','OPTIONS'])
-@basic_unpack
-def menu_add():
+@request_unpack
+def menu_add(body):
     if request.method == 'OPTIONS':
         return success_resp()
     img = request.files['img']
-    body = request.form
-    if not body:
-        body = request.json
     store_id = body.get('store_id')
     if not store_id:
         store_id = 0
@@ -344,15 +354,13 @@ def menu_add():
         data = {}
         data['menu'] = full_path
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data
 
 
 @node_store.route('/menu_delete', methods=['POST'])
-@basic_unpack
-def menu_delete():
-    body = request.form
-    if not body:
-        body = request.json
+@request_unpack
+def menu_delete(body):
     store_id = body.get('store_id')
     img = body.get('img')
     with SessionContext() as session:
@@ -368,4 +376,5 @@ def menu_delete():
         session.commit()
         data = {}
         session.result = success_resp(data)
-    return session.result
+    logger.info(session.result.log)
+    return session.result.data

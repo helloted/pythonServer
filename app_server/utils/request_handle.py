@@ -14,19 +14,20 @@ from app_server.response import failed_resp
 from app_server.response.errors import *
 
 
-def basic_unpack(func):
+def request_unpack(func):
     @wraps(func)
     def unpack(*args, **kwargs):
-        url = request.url
+        route = request.url[21:]
         method = request.method
         if method == 'GET':
-            logger.info(('GET',url))
+            logger.info('WEB -> HF: {method} {route}'.format(method=request.method, route=route))
+            result = func(*args, **kwargs)
         else:
             body = request.json
             if not body:
                 body = request.form
-            logger.info((url,body))
-        result = func(*args, **kwargs)
+            logger.info('WEB -> HF: {method} {route} {body}'.format(method=request.method, route=route,body=json.dumps(body)))
+            result = func(body,*args, **kwargs)
         return result
     return unpack
 

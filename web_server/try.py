@@ -38,6 +38,19 @@ def repeat_upload():
     resp = requests.post(url,json.dumps(paras),headers=headers)
     print resp.text
 
+def interactive_setting_list():
+    global url
+    url = url + 'device/interactive_setting_list'
+    resp = requests.get(url,headers=headers)
+    print resp.text
+
+def interactive_setting():
+    global url
+    url = url + 'device/interactive_setting'
+    paras = {'device_sn':'6201001000000','type':1,'url':'www.baidu.com'}
+    resp = requests.post(url,json.dumps(paras),headers=headers)
+    print resp.text
+
 
 def service_id():
     global url
@@ -77,4 +90,4 @@ def device_detail():
 
 
 if __name__ == '__main__':
-    device_detail()
+    interactive_setting()

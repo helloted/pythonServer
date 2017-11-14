@@ -52,6 +52,10 @@ def receive_push_queue():
         if task_type == 'device_setting':
             cloud_setting(task_dict)
 
+        # 更新设备设置
+        if task_type == 'interactive_setting':
+            interactive_setting(task_dict)
+
         gevent.sleep(0)
 
 
@@ -180,6 +184,22 @@ def cloud_setting(task_dict):
         if device.cut_cmds:
             content['cut_cmds'] = json.loads(device.cut_cmds)
         session.commit()
+
+    push_to_device_handle(device_sn=device_sn, cmd=cmd, content=content, seq=seq, msg_sn=msg_sn)
+
+
+def interactive_setting(task_dict):
+    msg_sn = task_dict.get('msg_sn')
+    device_sn = task_dict.get('device_sn')
+    url = task_dict.get('url')
+    url_type = task_dict.get('url_type')
+
+    content = {}
+    content['device_sn'] = device_sn
+    content['url'] = url
+    content['type'] = url_type
+    cmd = 'interactive_setting'
+    seq = 20
 
     push_to_device_handle(device_sn=device_sn, cmd=cmd, content=content, seq=seq, msg_sn=msg_sn)
 
