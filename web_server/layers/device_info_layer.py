@@ -17,6 +17,7 @@ from web_server.utils import errors
 from super_models.device_store_model import DeviceStore
 from redis_manager import device_redis
 import json
+from super_models.store_model import Store
 
 
 node_device_info=Blueprint('device_info_layer',__name__,)
@@ -166,13 +167,16 @@ def device_filter(body):
         query = session.query(Device)
 
         if store_name:
-            query = query.filter(DeviceStore.name == store_name, Device.store_id == DeviceStore.store_id)
+            like_name = '%{name}%'.format(name=store_name)
+            query = query.filter(DeviceStore.store_name.ilike(like_name), Device.sn == DeviceStore.device_sn)
 
         if problem:
             query = query.filter_by(problem=problem)
 
+
         if device_sn:
-            query = query.filter_by(sn=device_sn)
+            like_sn = '%{device_sn}%'.format(device_sn=device_sn)
+            query = query.filter(Device.sn.ilike(like_sn))
 
         if has_online:
             online = body.get('online')
@@ -200,7 +204,7 @@ def device_filter(body):
             device_store = session.query(DeviceStore).filter(DeviceStore.device_sn == dev.sn).first()
             if device_store:
                 device['store_id'] = device_store.store_id
-                device['store_name'] = device_store.name
+                device['store_name'] = device_store.store_name
 
             device['online'] = device_redis.check_online(dev.sn)
 
@@ -214,3 +218,25 @@ def device_filter(body):
     return session.result.resp_data
 
 
+@node_device_info.route('/bind_store', methods=['OPTIONS','POST'])
+@transfer
+def bind_store(body):
+    store_id = body.get('store_id')
+    device_sn = body.get('device_sn')
+    logger.info(device_sn)
+    with SessionContext() as session:
+        bind = session.query(DeviceStore).filter(DeviceStore.device_sn==device_sn).first()
+        logger.info(bind)
+        if not bind:
+            session.result = response_failed(errors.ERROR_No_Such_Deivce)
+        else:
+            bind.store_id = store_id
+            store = session.query(Store).filter(Store.store_id==store_id).first()
+            if not store:
+                session.result = response_failed(errors.ERROR_No_Such_Store)
+            else:
+                bind.store_name = store.name
+                session.commit()
+                session.result = response_success()
+    logger.info(session.result.log)
+    return session.result.resp_data

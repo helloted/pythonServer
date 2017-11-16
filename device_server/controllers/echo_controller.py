@@ -17,7 +17,6 @@ def echo_push_handle(data,tcp_socket):
     code = content.get('code')
     msg_sn = content.get('msg_sn')
     if code == 0 and msg_sn:
-
         success_push(tcp_socket.device_sn,msg_sn)
 
 

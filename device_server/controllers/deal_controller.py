@@ -68,7 +68,7 @@ def upload_deal(data,tcp_socket):
     try:
         tcp_socket.send(send.data)
     except Exception, e:
-        logger.error(e)
+        logger.info(e)
     else:
         logger.info(send.log)
 

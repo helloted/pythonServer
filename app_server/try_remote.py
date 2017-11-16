@@ -1,6 +1,7 @@
 
 import urllib,urllib2
 import json
+import requests
 import datetime
 import time,random
 from log_util.device_logger import logger
@@ -25,7 +26,7 @@ def banner():
 def hots():
     global url
     url = url + 'homepage/hots'
-    textmod = {'region_code': 1}
+    textmod = {'region_code': 1,'category':'Seafood'}
     textmod = urllib.urlencode(textmod)
     print(textmod)
     req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
@@ -36,7 +37,7 @@ def hots():
 def recommands():
     global url
     url = url + 'homepage/recommands'
-    textmod = {'region_code': 1}
+    textmod = {'region_code': 1,'page':3,'amount':10}
     textmod = urllib.urlencode(textmod)
     print(textmod)
     req = urllib2.Request(url='%s%s%s' % (url, '?', textmod))
@@ -260,5 +261,35 @@ def save_to_file(file_name, contents):
     fh.close()
 
 
+def qr_scan():
+    global url
+    url = url + 'qr/scan'
+    user_mod = {'user_id':2,'token':'640380632c09c9e8604569a0334da7c036697fc2'}
+    url_mod = urllib.urlencode(user_mod)
+    url = '%s%s%s' % (url, '?', url_mod)
+    data = {'order_sn':'UsEGfusYXW545hD1928b0c'}
+    response = requests.post(url,json=data)
+    print response.text
+
+
+def qr_list():
+    global url
+    url = url + 'qr/list'
+    user_mod = {'user_id':2,'token':'640380632c09c9e8604569a0334da7c036697fc2'}
+    url_mod = urllib.urlencode(user_mod)
+    url = '%s%s%s' % (url, '?', url_mod)
+    response = requests.get(url)
+    print response.text
+
+
+def store_search():
+    global url
+    url = url + 'store/search'
+    user_mod = {'key':'mo'}
+    url_mod = urllib.urlencode(user_mod)
+    url = '%s%s%s' % (url, '?', url_mod)
+    response = requests.get(url)
+    print response.text
+
 if __name__ == '__main__':
-    store_list()
+    homepage()

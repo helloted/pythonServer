@@ -1,3 +1,4 @@
+#coding=utf-8
 from sqlalchemy import Column, Integer, String,BigInteger, DECIMAL, Float,JSON
 from super_models.database import Base
 
@@ -14,16 +15,20 @@ class Store(Base):
     region_code = Column(Integer)
     region = Column(String(64))
 
+    # 特殊类型
+    # 0 为默认
+    # 1 为hot
+    special_type = Column(Integer,default=0)
 
-    icon = Column(String(128))
+    icon = Column(String(256))
 
     name = Column(String(50))
     phone = Column(String(16))
 
 
-    lng = Column(DECIMAL(13,10),default=0)
+    lng = Column(DECIMAL(13,10),default=0.01)
 
-    lat = Column(DECIMAL(13,10),default=0)
+    lat = Column(DECIMAL(13,10),default=0.01)
 
     district = Column(String(64))
 

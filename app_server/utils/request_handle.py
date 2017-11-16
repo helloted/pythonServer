@@ -20,13 +20,13 @@ def request_unpack(func):
         route = request.url[21:]
         method = request.method
         if method == 'GET':
-            logger.info('WEB -> HF: {method} {route}'.format(method=request.method, route=route))
+            logger.info('APP -> HF: {method} {route}'.format(method=request.method, route=route))
             result = func(*args, **kwargs)
         else:
             body = request.json
             if not body:
                 body = request.form
-            logger.info('WEB -> HF: {method} {route} {body}'.format(method=request.method, route=route,body=json.dumps(body)))
+            logger.info('APP -> HF: {method} {route} {body}'.format(method=request.method, route=route,body=json.dumps(body)))
             result = func(body,*args, **kwargs)
         return result
     return unpack
@@ -42,10 +42,14 @@ def login_required(func):
         redis_token = redis_center.get(key)
 
         if not token:
-            return failed_resp(ERROR_Login_First)
+            res= failed_resp(ERROR_Login_First)
+            logger.info(res.log)
+            return res.data
 
         if token != redis_token:
-            return failed_resp(ERROR_Token_Invalid)
+            resp= failed_resp(ERROR_Token_Invalid)
+            logger.info(resp.log)
+            return resp.data
 
         result = func(*args, **kwargs)
         return result

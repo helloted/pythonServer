@@ -10,7 +10,7 @@ from flask import Blueprint
 from flask import request
 from app_server.utils.request_handle import request_unpack
 from app_server.controllers.banner_controller import get_current_banners
-from app_server.controllers.hot_category_controller import get_hot_sotres
+from app_server.controllers.hot_category_controller import get_hot_category
 from app_server.controllers.special_store_controller import get_recommend_stores
 from app_server.response import success_resp,failed_resp
 from app_server.models import SessionContext
@@ -21,6 +21,8 @@ from app_server.models.comment_model import Comment
 import json
 from app_server.response import errors
 from log_util.app_logger import logger
+from super_models.store_model import Store
+from app_server.controllers.special_store_controller import convert_little_store
 
 node_homepage=Blueprint('homepage_layer',__name__,)
 
@@ -32,8 +34,8 @@ def homepage():
     region_code = paras.get('region_code')
 
     worker_banners = gevent.spawn(get_current_banners, region_code)
-    worker_hots = gevent.spawn(get_hot_sotres, region_code)
-    worker_recommends = gevent.spawn(get_recommend_stores, region_code)
+    worker_hots = gevent.spawn(get_hot_category, region_code)
+    worker_recommends = gevent.spawn(get_recommend_stores, region_code,0,10)
     gevent.joinall([worker_banners, worker_hots, worker_recommends])
 
     banners = worker_banners.value
@@ -45,7 +47,9 @@ def homepage():
     data['hots'] = hot_stores
     data['recomments'] = recommend_stores
 
-    return success_resp(data).data
+    resp = success_resp(data)
+    logger.info(resp.log)
+    return resp.data
 
 
 @node_homepage.route('/banners', methods=['GET'])
@@ -59,7 +63,6 @@ def banner_query():
 
     resp = success_resp(data)
     logger.info(resp.log)
-
     return resp.data
 
 
@@ -68,11 +71,17 @@ def banner_query():
 def hots():
     paras = request.args
     region_code = paras.get('region_code')
-
-    hots = get_hot_sotres(region_code)
-    data = hots
-
-    return success_resp(data).data
+    category = paras.get('category')
+    data = []
+    with SessionContext() as session:
+        stores = session.query(Store).filter(Store.special_type==1,Store.region_code==region_code,Store.category==category).all()
+        if stores:
+            for store in stores:
+                store_dict = convert_little_store(store)
+                data.append(store_dict)
+    resp = success_resp(data)
+    logger.info(resp.log)
+    return resp.data
 
 
 @node_homepage.route('/recommands', methods=['GET'])
@@ -80,12 +89,25 @@ def hots():
 def recommands():
     paras = request.args
     region_code = paras.get('region_code')
+    page = paras.get('page')
+    amount = paras.get('amount')
 
-    recommands = get_recommend_stores(region_code)
+    if not region_code or not page or not amount:
+        resp = failed_resp(errors.ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
+
+    page_int = int(page)
+    amount_int = int(amount)
+    offset = (page_int -1) * amount_int
+
+    recommands = get_recommend_stores(region_code=region_code,offset=offset,amount=amount_int)
 
     data = recommands
 
-    return success_resp(data).data
+    resp = success_resp(data)
+    logger.info(resp.log)
+    return resp.data
 
 
 @node_homepage.route('/goods_show', methods=['GET'])
@@ -158,5 +180,4 @@ def goods_show():
         session.result = success_resp(data)
     logger.info(session.result.log)
     return session.result.data
-
 

@@ -6,15 +6,18 @@ caohaozhi@swindtech.com
 HotStoreModel控制
 """
 
+import sys, os; sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 from super_controllers.id_dispath import get_store_id
 from super_models.database import SessionContext
-from app_server.response.resp import dberror_handle
+from app_server.response import dberror_handle
 from super_models.store_model import Store
 import json
 
 
+
 def store_add(region_code=None,district=None,name=None,phone=None,lng=None,lat=None,score=None,per=None,location=None,open_time=None,close_time=None,set_up=None):
     store_id = get_store_id()
+    print store_id
     if store_id:
         store = Store()
         store.store_id = store_id
@@ -22,8 +25,14 @@ def store_add(region_code=None,district=None,name=None,phone=None,lng=None,lat=N
         store.district = district
         store.name = name
         store.phone = phone
-        store.lng = lng
-        store.lat = lat
+        if lng:
+            store.lng = lng
+        else:
+            store.lng = 0.1
+        if lat:
+            store.lat = lat
+        else:
+            store.lat = 0.1
         store.score = score
         store.per = per
         store.location = location
@@ -97,5 +106,6 @@ def store_query(store_id):
 
 
 if __name__ == '__main__':
-    store_update(1,banners_list=['http://img.sj33.cn/uploads/allimg/201402/7-140206204500561.png',],menus_list=['http://img.sj33.cn/uploads/allimg/201402/7-140206204500561.png',],services='Wifi|Air condition')
-    # store_add(name='HelloKitty',region_code=1)
+    store_update(store_id=1,icon='https://www.qraved.co/mobile/image?name=data/Indonesia/Jakarta/Puri_Indah/Sushi_Joobu/131435443_vpze0cpxxnmto64m1jgvswv5cwquv-l8trd75b93waq-960x1280.jpg')
+    # store_update(1,banners_list=['http://img.sj33.cn/uploads/allimg/201402/7-140206204500561.png',],menus_list=['http://img.sj33.cn/uploads/allimg/201402/7-140206204500561.png',],services='Wifi|Air condition')
+    # # store_add(name='HelloKitty',region_code=1)

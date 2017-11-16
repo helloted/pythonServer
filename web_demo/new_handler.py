@@ -43,6 +43,9 @@ class AllStores(tornado.web.RequestHandler):
                 district = val[0]
                 dis_dict = {}
                 dis_dict['district'] = district
+                if district == 'Senopati':
+                    continue
+                logger.info(district)
                 store_list = []
                 stores = session.query(Store).filter_by(district=district).all()
                 for store in stores:

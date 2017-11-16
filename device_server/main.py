@@ -50,12 +50,14 @@ def handel_data(data,tcp_socket):
         except Exception, e:
             logger.error(e)
             tcp_socket.close()
+            return
 
     try:
         data = json.loads(data)
     except Exception,e:
         logger.error(e)
         tcp_socket.close()
+        return
 
     seq = data.get('seq')
     seq_int = int(seq)

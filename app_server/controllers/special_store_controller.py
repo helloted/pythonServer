@@ -9,6 +9,7 @@ StoreModel控制
 from super_models.store_model import Store
 from super_models.database import SessionContext
 from app_server.response import dberror_handle
+from log_util.app_logger import logger
 
 def convert_little_store(store):
     little = {}
@@ -29,9 +30,9 @@ def convert_little_store(store):
     return little
 
 
-def get_recommend_stores(region_code=None):
+def get_recommend_stores(region_code=None,offset=None,amount=None):
     with SessionContext(dberror_handle) as session:
-        stores = session.query(Store).filter_by(region_code=region_code).all()
+        stores = session.query(Store).filter_by(region_code=region_code).limit(amount).offset(offset).all()
         recommends = []
         for store in stores:
             little = convert_little_store(store)

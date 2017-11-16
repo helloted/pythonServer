@@ -14,7 +14,7 @@ char = 'utf8'
 data_url = 'mysql+pymysql://{user}:{password}@localhost:{port}/{database_name}'.format(**locals())
 
 # 最大连接处
-engine = create_engine(data_url,max_overflow=10,connect_args={'charset':'utf8'},echo=False)
+engine = create_engine(data_url,max_overflow=10,pool_size=10,pool_recycle=5,connect_args={'charset':'utf8'},echo=False)
 
 Base = declarative_base()
 

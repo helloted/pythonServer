@@ -9,6 +9,7 @@ from super_models.database import Session
 from log_util.app_logger import logger
 from app_server.response import failed_resp
 from app_server.response.errors import ERROR_DataBase
+import traceback
 
 class SessionContext():
     def __init__(self,back_exc=False):
@@ -21,8 +22,8 @@ class SessionContext():
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.session.close()
         if exc_tb:
+            logger.info(traceback.format_exc())
             self.session.rollback()
-            logger.info(exc_val)
             if self.__back_exc:
                 self.session.result = exc_val
             else:

@@ -13,11 +13,10 @@ class HotCategory(Base):
 
     id = Column(BigInteger, primary_key=True)
 
-    category = Column(String(128),index=True,unique=True)
+    category = Column(String(128),index=True)
 
-    img =  Column(String(256))
+    category_img = Column(String(256))
 
     region_code = Column(Integer)
 
-    stores = Column(String(512))
 

@@ -59,6 +59,8 @@ def article_add(body):
         down_path = image_save(user_id,img)
         imgs.append(down_path)
 
+    logger.info('after image')
+
     article_id = get_article_id()
     if article_id:
         article = Article()
@@ -81,9 +83,11 @@ def article_add(body):
             session.add(article)
             session.commit()
             session.result = success_resp()
+        logger.info('after session')
         logger.info(session.result.log)
         return session.result.data
     else:
+        logger.info('after else')
         resp = failed_resp(ERROR_DataBase)
         logger.info(resp.log)
         return resp.data

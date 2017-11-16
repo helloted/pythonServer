@@ -54,7 +54,6 @@ def success_resp(data=None):
 
 
 def failed_resp(error):
-    logger.info(error.msg)
     resp_dict = {}
     resp_dict['code'] = error.code
     resp_dict['msg'] = error.msg

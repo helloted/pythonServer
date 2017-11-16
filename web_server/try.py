@@ -88,6 +88,12 @@ def device_detail():
     resp = requests.get(url,paras)
     print resp.text
 
+def device_store():
+    global url
+    url = url + 'device_info/bind_store'
+    paras = {'device_sn':'6201001000105','store_id':10}
+    resp = requests.post(url,json.dumps(paras),headers=headers)
+    print resp.text
 
 if __name__ == '__main__':
-    interactive_setting()
+    device_store()

@@ -15,3 +15,4 @@ ERROR_Push_Device_Failed = WebServerError(code=104, msg='Can not push this messa
 ERROR_Deal_Not_Exist = WebServerError(code=105, msg='This deal not exist')
 ERROR_No_Such_Deivce = WebServerError(code=106, msg='No such device')
 ERROR_No_Such_Event = WebServerError(code=107, msg='No such event')
+ERROR_No_Such_Store = WebServerError(code=108, msg='No such store')

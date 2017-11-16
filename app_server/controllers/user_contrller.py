@@ -21,6 +21,8 @@ def user_add(phone,password):
             user.phone = phone
             user.password = password
             user.user_id = user_id
+            user.name = 'Fresh'
+            user.icon = 'http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/default_app_icon.png'
 
             current_time = int(time.time())
             user.register_time = current_time

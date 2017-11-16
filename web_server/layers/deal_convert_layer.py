@@ -69,6 +69,11 @@ def deal_event(post_body):
     device_sn = deal_name[:13]
     deal_sn = deal_name[:-4]
 
+    if len(deal_name) == 40:
+        device_sn = deal_name[:13]
+        deal_sn = deal_name[14:-4]
+
+
     file_path = folder_path + '/' + deal_name
 
     if not os.path.exists(file_path):
@@ -76,26 +81,31 @@ def deal_event(post_body):
         logger.info(resp.log)
         return resp.resp_data
     else:
-        if event == 1:
-            with open(file_path,'r') as file:
-                content = file.read()
+        session = Session()
+        try:
+            deal_status = session.query(DealStatus).filter(DealStatus.deal_sn == deal_sn).first()
+        except Exception, e:
+            logger.error(e)
+        else:
+            if event == 1:
+                with open(file_path, 'r') as file:
+                    content = file.read()
+                    os.remove(file_path)
+                    send_deal_to_celery(device_sn, deal_sn, content)
+            if event == 2:
                 os.remove(file_path)
-                send_deal_to_celery(device_sn,deal_sn,content)
-
-        if event == 2:
-            os.remove(file_path)
-            session = Session()
-            try:
-                deal_status = session.query(DealStatus).filter(DealStatus.deal_sn==deal_sn).first()
-            except Exception,e:
-                logger.error(e)
-            else:
-                if deal_status:
-                    deal_status.status = 3
-                    deal_status.remark = 'Deleted from WEB'
-                    session.commit()
-            finally:
-                session.close()
+                session = Session()
+                try:
+                    deal_status = session.query(DealStatus).filter(DealStatus.deal_sn == deal_sn).first()
+                except Exception, e:
+                    logger.error(e)
+                else:
+                    if deal_status:
+                        deal_status.status = 3
+                        deal_status.remark = 'Deleted from WEB'
+                        session.commit()
+        finally:
+            session.close()
 
         data = get_files_info()
         resp = response_success(data)

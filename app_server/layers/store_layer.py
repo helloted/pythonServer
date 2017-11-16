@@ -59,6 +59,7 @@ def store_detail():
                 continue
             data[key] = value
 
+        logger.info(data)
         data['favorite'] = False
         # 是否已收藏该店铺
         user_id = paras.get('user_id')
@@ -174,9 +175,6 @@ def store_filter():
     return session.result.data
 
 
-
-
-
 def haversine(lon1, lat1, lon2, lat2):  # 经度1，纬度1，经度2，纬度2 （十进制度数）
 
     # 将十进制度数转化为弧度
@@ -233,8 +231,6 @@ def store_list():
 @request_unpack
 def store_update(body):
     if not body:
-        body = request.json
-    if not body:
         resp = failed_resp(ERROR_Parameters)
         logger.info(resp.log)
         return resp.data
@@ -259,12 +255,13 @@ def store_update(body):
 @request_unpack
 def store_icon(body):
     img = request.files['img']
-    if not body:
-        body = request.json
     store_id = body.get('store_id')
     if not store_id:
         store_id = 0
-    full_path = image_save(store_id, img)
+    if img:
+        full_path = image_save(store_id, img)
+    else:
+        full_path = body.get('icon')
     with SessionContext() as session:
         store = session.query(Store).filter_by(store_id=store_id).first()
         store.icon = full_path
@@ -378,3 +375,25 @@ def menu_delete(body):
         session.result = success_resp(data)
     logger.info(session.result.log)
     return session.result.data
+
+
+@node_store.route('/search', methods=['GET'])
+@request_unpack
+def store_search():
+    key = request.args.get('key')
+    if not key:
+        resp = failed_resp(ERROR_Parameters)
+        logger.info(resp.log)
+        return resp.data
+    like_key = '%{key}%'.format(key=key)
+    with SessionContext() as session:
+        stores = session.query(Store).filter(Store.name.ilike(like_key)).limit(10).offset(0).all()
+        data = []
+        for store in stores:
+            store_dict = convert_little_store(store)
+            data.append(store_dict)
+        session.result = success_resp(data)
+    logger.info(session.result.log)
+    return session.result.data
+
+

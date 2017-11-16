@@ -53,18 +53,18 @@ def convert(device_sn,deal_sn,content):
     except Exception,e:
         logger.error(e)
         logger.error('{deal_sn} load script {script} failed'.format(deal_sn=deal_sn,script=script_name))
-        convert_failed_handle(deal_sn, content)
+        convert_failed_handle(device_sn,deal_sn, content)
     else:
         try:  # 小票单开始解析
             result_dict = py_module.format_convert(content)
         except Exception:
             logger.error(traceback.format_exc())
             logger.error('{deal_sn} convert error'.format(deal_sn=deal_sn))
-            convert_failed_handle(deal_sn, content)
+            convert_failed_handle(device_sn,deal_sn, content)
         else:
             if not result_dict:
                 logger.error('{deal_sn} convert failed, no result return'.format(deal_sn=deal_sn))
-                convert_failed_handle(deal_sn, content)
+                convert_failed_handle(device_sn,deal_sn, content)
                 return
 
             logger.info(result_dict)
@@ -82,14 +82,18 @@ def convert(device_sn,deal_sn,content):
                     except Exception, e:
                         logger.error(e)
                         logger.info('save {deal_sn} to DB error'.format(deal_sn=deal_sn))
-                        save_convert_failed_file(deal_sn, content)
+                        deal_name = device_sn + deal_sn
+                        save_convert_failed_file(deal_name, content)
             else: # 解析失败
                 logger.error('{deal_sn} convert finish, but result status is False'.format(deal_sn=deal_sn))
-                convert_failed_handle(deal_sn, content)
+                convert_failed_handle(device_sn,deal_sn, content)
 
 
-def convert_failed_handle(deal_sn,content):
-    save_convert_failed_file(deal_sn, content)
+def convert_failed_handle(device_sn,deal_sn,content):
+    deal_name = device_sn + '_'+  deal_sn
+    if deal_sn[0:2] == '62':
+        deal_name = deal_sn
+    save_convert_failed_file(deal_name, content)
     update_deal_status(deal_sn, 2)
 
 
@@ -116,12 +120,12 @@ def update_deal_status(deal_sn,status,type=None):
         session.close()
 
 
-def save_convert_failed_file(deal_sn,content):
+def save_convert_failed_file(deal_name,content):
     super_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
     folder_path = super_path + '/files/convert_failed/'
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
-    file_path = folder_path+deal_sn+'.txt'
+    file_path = folder_path+deal_name+'.txt'
 
     if isinstance(content, (dict)):
         content = json.dumps(content)
@@ -132,7 +136,7 @@ def save_convert_failed_file(deal_sn,content):
     except Exception,e:
         logger.error(e)
     else:
-        logger.info('{deal_sn} convert failed,saved at {path}'.format(deal_sn=deal_sn,path=file_path))
+        logger.info('{deal_sn} convert failed,saved at {path}'.format(deal_sn=deal_name,path=file_path))
 
 
 def save_deal_to_DB(device_sn,deal_sn,convert_result):

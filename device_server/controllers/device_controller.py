@@ -59,6 +59,8 @@ def init_connect(data,tcp_socket,sockets):
             key_model = key_session.query(DeviceKey).filter_by(device_sn=device_sn).first()
         except Exception,e:
             logger.error(e)
+            tcp_socket.close()
+            return
         else:
             my_sign = ''
             if key_model:

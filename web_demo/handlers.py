@@ -557,7 +557,6 @@ class StatisticsYearHandler(tornado.web.RequestHandler):
 
 class StatisticsMonthHandler(tornado.web.RequestHandler):
     def get(self):
-        logger.info('===here')
         start_time = int(self.get_argument('start_time'))
         end_time = int(self.get_argument('end_time'))
         request_type = 0
@@ -608,7 +607,6 @@ class StatisticsMonthHandler(tornado.web.RequestHandler):
                     func.sum(Deal.tax)). \
                     filter(Deal.time.between(start_time, end_time), Deal.store_id == store_id).all()
             elif request_type == 3:
-                logger.info('=================')
                 logger.info(district)
                 result = session.query(func.date_format(Deal.datetime, '%Y-%m-%d'), \
                                        func.count('*'),
