@@ -1,10 +1,13 @@
+import sys, os; sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir,os.pardir))
 from flask import Blueprint
 from app_server.utils.request_handle import request_unpack,login_required
 from flask import request
 from super_models.order_model import Order
 from super_models.lottery_model import Lottery
+from super_models.store_model import Store
 from app_server.response import errors
 from app_server.models import SessionContext
+from super_models.database import Session
 from app_server.response import success_resp,failed_resp,errors
 from log_util.app_logger import logger
 import random,time
@@ -14,15 +17,23 @@ node_qr=Blueprint('qr_layer',__name__,)
 
 def lottery_random():
     num = random.randint(0, 3)
+    lottery_type = 0
     if num == 0:
-        content = 'Sorry, you got nothing, please try it next time'
+        content = 'Nothing'
+        info = 'Sorry, you got nothing, please try it next time'
     elif num == 1:
-        content = 'Congratulations, you won Mobile Data 200M'
+        lottery_type = 1
+        content = '200M'
+        info = 'Congratulations, you won Mobile Data {content}'.format(content=content)
     elif num == 2:
-        content = 'Congratulations, you won Mobile Data 100M'
+        lottery_type  = 1
+        content = '100M'
+        info = 'Congratulations, you won Mobile Data {content}'.format(content=content)
     else:
-        content = 'Congratulations, you won Mobile Data 50M'
-    return num,content
+        lottery_type = 1
+        content = '50M'
+        info = 'Congratulations, you won Mobile Data  {content}'.format(content=content)
+    return num,lottery_type,content,info
 
 
 @node_qr.route('/scan', methods=['POST'])
@@ -49,11 +60,13 @@ def qr_scan(body):
             return resp.data
         else:
             lottery = Lottery()
-            num,content = lottery_random()
+            num,lottery_type,content,info = lottery_random()
             lottery.user_id = user_id
             lottery.lottery_status = num
             lottery.lottery_content = content
+            lottery.lottery_info = info
             lottery.order_sn = order_sn
+            lottery.lottery_type = lottery_type
             lottery.lottery_time = int(round(time.time() * 1000))
             lottery.order_time = order.order_time
             data = {}
@@ -94,4 +107,5 @@ def qr_list():
 
     logger.info(session.result.log)
     return session.result.data
+
 

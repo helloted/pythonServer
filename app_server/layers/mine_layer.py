@@ -19,6 +19,8 @@ import json
 from app_server.models.user_model import User
 from app_server.controllers.article_controller import article_to_dict
 from log_util.app_logger import logger
+from super_models.lottery_model import Lottery
+from super_models.order_model import Order
 
 
 node_mine=Blueprint('mine_layer',__name__,)
@@ -92,5 +94,35 @@ def article_list():
             data.append(one)
         session.result = success_resp(data)
 
+    logger.info(session.result.log)
+    return session.result.data
+
+
+@node_mine.route('/consumptions', methods=['GET'])
+@request_unpack
+@login_required
+def consumptions():
+    paras = request.args
+    user_id = paras.get('user_id')
+    page = paras.get('page')
+    amount = paras.get('amount')
+    page_int = int(page)
+    amount_int = int(amount)
+    offset = (page_int-1) * amount_int
+    data = []
+    with SessionContext() as session:
+        results = session.query(Lottery,Order).order_by((Lottery.order_time.desc())).filter(Lottery.user_id==user_id,Lottery.order_sn==Order.order_sn).limit(amount_int).offset(offset).all()
+        if results:
+            for result in results:
+                order = result[1]
+                if order:
+                    consumption = {}
+                    consumption['order_time'] = order.order_time
+                    consumption['order_sn'] = order.order_sn
+                    consumption['store_id'] = order.store_id
+                    consumption['store_name'] = order.store_name
+                    consumption['total_price'] = order.total_price
+                    data.append(consumption)
+        session.result = success_resp(data)
     logger.info(session.result.log)
     return session.result.data

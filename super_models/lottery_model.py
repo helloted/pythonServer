@@ -32,5 +32,12 @@ class Lottery(Base):
     # 2 为2等奖
     lottery_status = Column(Integer)
 
-    # 中奖内容
-    lottery_content = Column(String(128))
+    # 奖品类型
+    # 1 为手机流量
+    lottery_type = Column(Integer)
+
+    # 奖品内容内容
+    lottery_content = Column(String(64))
+
+    # 中奖提示
+    lottery_info = Column(String(128))
