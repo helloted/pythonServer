@@ -11,6 +11,6 @@ class DeviceStore(Base):
 
     device_sn = Column(String(32),unique=True)
 
-    store_id = Column(BigInteger)
+    store_id = Column(BigInteger,default=-1)
 
-    store_name = Column(String(64))
+    store_name = Column(String(64),default='TEMP_Store')

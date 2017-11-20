@@ -292,4 +292,4 @@ def store_search():
     print response.text
 
 if __name__ == '__main__':
-    homepage()
+    article_list()

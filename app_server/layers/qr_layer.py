@@ -16,7 +16,7 @@ node_qr=Blueprint('qr_layer',__name__,)
 
 
 def lottery_random():
-    num = random.randint(0, 3)
+    num = random.randint(1, 3)
     lottery_type = 0
     if num == 0:
         content = 'Nothing'

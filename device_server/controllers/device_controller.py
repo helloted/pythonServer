@@ -5,7 +5,7 @@ caohaozhi@swindtech.com
 2017.06.01
 设备处理
 """
-
+import sys, os; sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir,os.pardir))
 from super_models.device_model import Device, SeedToken
 from super_models.database import Session
 from log_util.device_logger import logger
@@ -335,7 +335,4 @@ def pushToken():
     jsresp = json.dumps(dic)
 
     return jsresp
-
-
-
 

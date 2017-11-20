@@ -69,14 +69,15 @@ def hot_category_query(id):
 
 
 def add_hot_category():
-    hot_category_add('Steak',img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/steak_for_hot.jpg',region_code=1)
+    hot_category_add('Steak',img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/steak_category.png',region_code=1)
     hot_category_add('SeaFood',
-                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/seafood_page.jpg', region_code=1)
+                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/seafood_category.png', region_code=1)
     hot_category_add('Japanese',
-                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/japanese_for_hot.jpg', region_code=1)
+                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/japanese_category.png', region_code=1)
     hot_category_add('Indian',
-                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/india_for_hot.jpeg', region_code=1)
-
+                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/india_category.png', region_code=1)
+    hot_category_add('Korean BBQ',
+                     img='http://swindtech-img.oss-ap-southeast-1.aliyuncs.com/korea_category.png', region_code=1)
 
 
 def add_hot_store(store_id):
@@ -92,6 +93,4 @@ def add_hot_store(store_id):
 
 
 if __name__ == '__main__':
-    stores = [1,2,3,5,6,10,11,12,13,14,15,17,20,22,23,24,25,26,30,32,33,35,36,39,]
-    for i in stores:
-        add_hot_store(i)
+    add_hot_category()

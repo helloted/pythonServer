@@ -22,6 +22,8 @@ from redis_manager import redis_center
 from app_server.utils.imgtool import image_save
 from app_server.models.favorite_model import FavoriteStore
 from log_util.app_logger import logger
+from super_models.lottery_model import Lottery
+from app_server.models.article_model import Article
 
 user_token_key = 'app_user_token'
 
@@ -116,8 +118,11 @@ def user_login(body):
                     else:
                         data[key] = value
 
-                count = session.query(FavoriteStore).filter_by(user_id=user.user_id).count()
-                data['favorite_amount'] = count
+                count = session.query(Article).filter(Article.poster_id ==user.user_id).count()
+                data['review_amount'] = count
+
+                lottery_count = session.query(Lottery).filter(Lottery.user_id==user.user_id).count()
+                data['lottery_count'] = lottery_count
 
                 session.result = success_resp(data)
             else:
@@ -156,7 +161,6 @@ def get_code():
         return success_resp(data).data
     else:
         return failed_resp(ERROR_Parameters).data
-
 
 
 @node_user.route('/', methods=['GET'])
