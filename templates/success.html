@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible " content="ie=edge ">
+    <script type="text/javascript">
+        (function (designWidth, maxWidth) {
+            var doc = document,
+                win = window,
+                docEl = doc.documentElement,
+                remStyle = document.createElement("style"),
+                tid;
+
+            function refreshRem() {
+                var width = docEl.getBoundingClientRect().width;
+                maxWidth = maxWidth || 540;
+                width > maxWidth && (width = maxWidth);
+                var rem = width * 100 / designWidth;
+                remStyle.innerHTML = 'html{font-size:' + rem + 'px;}';
+            }
+
+            if (docEl.firstElementChild) {
+                docEl.firstElementChild.appendChild(remStyle);
+            } else {
+                var wrap = doc.createElement("div");
+                wrap.appendChild(remStyle);
+                doc.write(wrap.innerHTML);
+                wrap = null;
+            }
+            //要等 wiewport 设置好后才能执行 refreshRem，不然 refreshRem 会执行2次；
+            refreshRem();
+
+            win.addEventListener("resize", function () {
+                clearTimeout(tid); //防止执行两次
+                tid = setTimeout(refreshRem, 300);
+            }, false);
+
+            win.addEventListener("pageshow", function (e) {
+                if (e.persisted) { // 浏览器后退的时候重新计算
+                    clearTimeout(tid);
+                    tid = setTimeout(refreshRem, 300);
+                }
+            }, false);
+
+            if (doc.readyState === "complete") {
+                doc.body.style.fontSize = "16px";
+            } else {
+                doc.addEventListener("DOMContentLoaded", function (e) {
+                    doc.body.style.fontSize = "16px";
+                }, false);
+            }
+        })(750, 750);
+    </script>
+    <title>Certificate</title>
+</head>
+
+<body>
+    <div class="certificate-ct">
+        <img src="/static/images/page_1@2x.png" alt="">
+    </div>
+    <div class="title">THIS CERTIFICATE IS PRESENTED BY</div>
+    <div class="logo-ct">
+        <img src="/static/images/logo@2x.png" alt="">
+    </div>
+    <div class="result">
+        <div class="result-info">
+            <table>
+                <tbody>
+                    <tr>
+                        <td class="label-name">Company:</td>
+                        <td class="label-info">{{company}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-name">Product:</td>
+                        <td class="label-info">{{product}}</td>
+                    </tr> 
+                </tbody>
+            </table>
+        </div>
+        <div class="zhang-ct">
+            <img class="zhang-png" src="/static/images/zhang@2x.png" alt="">
+        </div>
+    </div>
+    <div class="badge">
+        <div class="line">
+            <img src="/static/images/line@2x.png" alt="">
+        </div>
+        <div class="badge-ct">
+            <img src="/static/images/372@2x.png" alt="">
+        </div>
+        <div class="line">
+            <img src="/static/images/line@2x.png" alt="">
+        </div>
+    </div>
+</body>
+<style type="text/css">
+    body {
+        background-color: #333;
+        font-family: Helvetica, "Arial",sans-serif;
+        overflow: hidden;
+    }
+
+    .certificate-ct {
+        margin-top: 1.22rem;
+        margin-left: 0.53rem;
+        margin-right: 0.53rem;
+        height: 1.2rem;
+    }
+
+    .title {
+        margin-top: .04rem;
+        text-align: center;
+        color: #ccc;
+        font-size: .24rem;
+    }
+
+    img {
+        width: 100%;
+    }
+
+    .logo-ct {
+        width: 3.11rem;
+        height: 1.04rem;
+        margin: 0 auto;
+        margin-top: .27rem;
+    }
+
+    .result {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 80%;
+        margin: 1.45rem auto 0 auto;
+        height: 2.47rem;
+    }
+
+    .result-info {
+        flex: 1;
+        color: #cbcbcb;
+        font-size: .3rem;
+        letter-spacing: 0.3px;
+    }
+    .result-info > table{
+        margin: 0 auto;
+    }
+
+    .label-name {
+        text-align: right;
+        vertical-align: baseline;
+    }
+
+    .label-info {
+        padding-left: 0.04rem;
+        vertical-align: baseline;
+    }
+
+    .zhang-ct {
+        position: absolute;
+        right: 0;
+        width: 2.47rem;
+        height: 2.47rem;
+    }
+
+    .badge {
+        margin-top: .42rem;
+        margin-left: .92rem;
+        margin-right: .92rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+</style>
+
+</html>
